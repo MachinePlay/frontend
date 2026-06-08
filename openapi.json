@@ -489,7 +489,7 @@
     "/registry/token": {
       "get": {
         "summary": "Registry Token",
-        "description": "Docker Registry v2 token endpoint (the registry's `auth.token.realm`).\n\nAuthenticates the ``mp_`` token sent as the HTTP Basic password (written by\n``machineplay login``) and mints a signed JWT granting the requested scopes:\n``pull`` is always allowed (engines are public); ``push`` only when the\nrepository is namespaced under the authenticated user's login.",
+        "description": "Docker Registry v2 token endpoint (the registry's `auth.token.realm`).\n\nAuthenticates the ``mp_`` token sent as the HTTP Basic password (written by\n``machineplay login``) and mints a signed JWT granting the requested scopes:\n``pull`` is always allowed (engines are public); ``push`` only when the\nrepository is namespaced under the authenticated user's login (or, for\nadmins, under the reserved ``machineplay`` system namespace).",
         "operationId": "registry_token",
         "responses": {
           "200": {
@@ -569,10 +569,6 @@
             "type": "string",
             "title": "Name"
           },
-          "command": {
-            "type": "string",
-            "title": "Command"
-          },
           "description": {
             "type": "string",
             "title": "Description"
@@ -598,7 +594,6 @@
         "required": [
           "id",
           "name",
-          "command",
           "description"
         ],
         "title": "EngineOut"
@@ -693,25 +688,11 @@
             "title": "Size Bytes"
           },
           "image_repository": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Image Repository"
           },
           "image_digest": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Image Digest"
           },
           "created_at": {
@@ -725,6 +706,8 @@
           "id",
           "version",
           "size_bytes",
+          "image_repository",
+          "image_digest",
           "created_at"
         ],
         "title": "EngineVersionOut"

@@ -47,10 +47,6 @@ export type EngineOut = {
      */
     name: string;
     /**
-     * Command
-     */
-    command: string;
-    /**
      * Description
      */
     description: string;
@@ -135,11 +131,11 @@ export type EngineVersionOut = {
     /**
      * Image Repository
      */
-    image_repository?: string | null;
+    image_repository: string;
     /**
      * Image Digest
      */
-    image_digest?: string | null;
+    image_digest: string;
     /**
      * Created At
      */
