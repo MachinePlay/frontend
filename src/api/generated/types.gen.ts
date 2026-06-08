@@ -5,24 +5,6 @@ export type ClientOptions = {
 };
 
 /**
- * Body_upload_engine
- */
-export type BodyUploadEngine = {
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Version
-     */
-    version: string;
-    /**
-     * Image
-     */
-    image: Blob | File;
-};
-
-/**
  * EngineDetailOut
  */
 export type EngineDetailOut = {
@@ -83,9 +65,35 @@ export type EngineOut = {
 };
 
 /**
- * EngineUploadResponse
+ * EngineRegisterRequest
  */
-export type EngineUploadResponse = {
+export type EngineRegisterRequest = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Version
+     */
+    version: string;
+    /**
+     * Repository
+     */
+    repository: string;
+    /**
+     * Digest
+     */
+    digest: string;
+    /**
+     * Size Bytes
+     */
+    size_bytes?: number;
+};
+
+/**
+ * EngineRegisterResponse
+ */
+export type EngineRegisterResponse = {
     /**
      * Engine Id
      */
@@ -124,6 +132,14 @@ export type EngineVersionOut = {
      * Size Bytes
      */
     size_bytes: number;
+    /**
+     * Image Repository
+     */
+    image_repository?: string | null;
+    /**
+     * Image Digest
+     */
+    image_digest?: string | null;
     /**
      * Created At
      */
@@ -356,6 +372,30 @@ export type MoveEvent = {
 };
 
 /**
+ * RegistryTokenOut
+ *
+ * Docker Registry v2 token response (`GET /registry/token`).
+ */
+export type RegistryTokenOut = {
+    /**
+     * Token
+     */
+    token: string;
+    /**
+     * Access Token
+     */
+    access_token: string;
+    /**
+     * Expires In
+     */
+    expires_in: number;
+    /**
+     * Issued At
+     */
+    issued_at: string;
+};
+
+/**
  * RunnerOut
  */
 export type RunnerOut = {
@@ -529,30 +569,30 @@ export type GetEngineResponses = {
 
 export type GetEngineResponse = GetEngineResponses[keyof GetEngineResponses];
 
-export type UploadEngineData = {
-    body: BodyUploadEngine;
+export type RegisterEngineData = {
+    body: EngineRegisterRequest;
     path?: never;
     query?: never;
-    url: '/engine/upload';
+    url: '/engine/register';
 };
 
-export type UploadEngineErrors = {
+export type RegisterEngineErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type UploadEngineError = UploadEngineErrors[keyof UploadEngineErrors];
+export type RegisterEngineError = RegisterEngineErrors[keyof RegisterEngineErrors];
 
-export type UploadEngineResponses = {
+export type RegisterEngineResponses = {
     /**
      * Successful Response
      */
-    200: EngineUploadResponse;
+    200: EngineRegisterResponse;
 };
 
-export type UploadEngineResponse = UploadEngineResponses[keyof UploadEngineResponses];
+export type RegisterEngineResponse = RegisterEngineResponses[keyof RegisterEngineResponses];
 
 export type ListRunnersData = {
     body?: never;
@@ -812,3 +852,19 @@ export type LogoutResponses = {
 };
 
 export type LogoutResponse = LogoutResponses[keyof LogoutResponses];
+
+export type RegistryTokenData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/registry/token';
+};
+
+export type RegistryTokenResponses = {
+    /**
+     * Successful Response
+     */
+    200: RegistryTokenOut;
+};
+
+export type RegistryTokenResponse = RegistryTokenResponses[keyof RegistryTokenResponses];
