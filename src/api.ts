@@ -1,12 +1,15 @@
 import type {
+  ApiTokenOut,
   EngineDetailOut,
   EngineOut,
   EngineVersionOut,
   GameOut,
+  PendingSignupOut,
   RunnerOut,
   SseStreamResponse,
   TokenOut,
   UserOut,
+  UserProfileOut,
 } from './api/generated'
 
 export const API_URL = import.meta.env.VITE_API_URL as string
@@ -54,6 +57,50 @@ export async function createCliToken(): Promise<string> {
   return ((await r.json()) as TokenOut).token
 }
 
+export async function fetchTokens(): Promise<ApiToken[]> {
+  const r = await fetch(`${API_URL}/me/tokens`, { credentials: 'include' })
+  if (!r.ok) throw new Error(`GET /me/tokens failed: ${r.status}`)
+  return (await r.json()) as ApiToken[]
+}
+
+export async function revokeToken(id: string): Promise<void> {
+  const r = await fetch(`${API_URL}/me/tokens/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!r.ok) throw new Error(`DELETE /me/tokens/${id} failed: ${r.status}`)
+}
+
+// The GitHub signup waiting for a handle, or null when none is pending.
+export async function fetchPendingSignup(): Promise<PendingSignup | null> {
+  const r = await fetch(`${API_URL}/auth/pending`, { credentials: 'include' })
+  if (r.status === 401) return null
+  if (!r.ok) throw new Error(`GET /auth/pending failed: ${r.status}`)
+  return (await r.json()) as PendingSignup
+}
+
+// Complete a pending signup with the chosen handle. Throws the backend's
+// error message (taken/invalid handle) so the form can show it.
+export async function completeSignup(login: string): Promise<User> {
+  const r = await fetch(`${API_URL}/auth/register`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login }),
+  })
+  const body = await r.json()
+  if (!r.ok) {
+    throw new Error(body?.error?.message ?? `registration failed: ${r.status}`)
+  }
+  return body as User
+}
+
+export async function fetchUserProfile(login: string): Promise<UserProfile> {
+  const r = await fetch(`${API_URL}/u/${encodeURIComponent(login)}`)
+  if (!r.ok) throw new Error(`GET /u/${login} failed: ${r.status}`)
+  return (await r.json()) as UserProfile
+}
+
 export const START_FEN =
   'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
@@ -64,5 +111,8 @@ export type Runner = RunnerOut
 export type Game = GameOut
 export type User = UserOut
 export type StreamEvent = SseStreamResponse
+export type ApiToken = ApiTokenOut
+export type PendingSignup = PendingSignupOut
+export type UserProfile = UserProfileOut
 
 export type { GameStatus, LiveStreamEvent } from './api/generated'

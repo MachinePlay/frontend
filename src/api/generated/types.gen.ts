@@ -5,6 +5,28 @@ export type ClientOptions = {
 };
 
 /**
+ * ApiTokenOut
+ */
+export type ApiTokenOut = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Prefix
+     */
+    prefix: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Last Used At
+     */
+    last_used_at: string | null;
+};
+
+/**
  * EngineDetailOut
  */
 export type EngineDetailOut = {
@@ -368,6 +390,36 @@ export type MoveEvent = {
 };
 
 /**
+ * PendingSignupOut
+ *
+ * The in-progress GitHub signup waiting for the user to pick a handle.
+ */
+export type PendingSignupOut = {
+    /**
+     * Suggested Login
+     */
+    suggested_login: string;
+    /**
+     * Name
+     */
+    name: string | null;
+    /**
+     * Avatar Url
+     */
+    avatar_url: string;
+};
+
+/**
+ * RegisterRequest
+ */
+export type RegisterRequest = {
+    /**
+     * Login
+     */
+    login: string;
+};
+
+/**
  * RegistryTokenOut
  *
  * Docker Registry v2 token response (`GET /registry/token`).
@@ -490,6 +542,38 @@ export type UserOut = {
 };
 
 /**
+ * UserProfileOut
+ *
+ * Public profile: the user plus their engines and those engines' games.
+ */
+export type UserProfileOut = {
+    /**
+     * Login
+     */
+    login: string;
+    /**
+     * Name
+     */
+    name: string | null;
+    /**
+     * Avatar Url
+     */
+    avatar_url: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Engines
+     */
+    engines: Array<EngineOut>;
+    /**
+     * Games
+     */
+    games: Array<GameOut>;
+};
+
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -589,6 +673,36 @@ export type RegisterEngineResponses = {
 };
 
 export type RegisterEngineResponse = RegisterEngineResponses[keyof RegisterEngineResponses];
+
+export type UserProfileData = {
+    body?: never;
+    path: {
+        /**
+         * Login
+         */
+        login: string;
+    };
+    query?: never;
+    url: '/u/{login}';
+};
+
+export type UserProfileErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UserProfileError = UserProfileErrors[keyof UserProfileErrors];
+
+export type UserProfileResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserProfileOut;
+};
+
+export type UserProfileResponse = UserProfileResponses[keyof UserProfileResponses];
 
 export type ListRunnersData = {
     body?: never;
@@ -797,6 +911,47 @@ export type GithubCallbackResponses = {
     200: unknown;
 };
 
+export type PendingSignupData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/auth/pending';
+};
+
+export type PendingSignupResponses = {
+    /**
+     * Successful Response
+     */
+    200: PendingSignupOut;
+};
+
+export type PendingSignupResponse = PendingSignupResponses[keyof PendingSignupResponses];
+
+export type RegisterData = {
+    body: RegisterRequest;
+    path?: never;
+    query?: never;
+    url: '/auth/register';
+};
+
+export type RegisterErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RegisterError = RegisterErrors[keyof RegisterErrors];
+
+export type RegisterResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserOut;
+};
+
+export type RegisterResponse = RegisterResponses[keyof RegisterResponses];
+
 export type MeData = {
     body?: never;
     path?: never;
@@ -813,6 +968,24 @@ export type MeResponses = {
 
 export type MeResponse = MeResponses[keyof MeResponses];
 
+export type ListTokensData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/me/tokens';
+};
+
+export type ListTokensResponses = {
+    /**
+     * Response List Tokens
+     *
+     * Successful Response
+     */
+    200: Array<ApiTokenOut>;
+};
+
+export type ListTokensResponse = ListTokensResponses[keyof ListTokensResponses];
+
 export type CreateTokenData = {
     body?: never;
     path?: never;
@@ -828,6 +1001,40 @@ export type CreateTokenResponses = {
 };
 
 export type CreateTokenResponse = CreateTokenResponses[keyof CreateTokenResponses];
+
+export type RevokeTokenData = {
+    body?: never;
+    path: {
+        /**
+         * Token Id
+         */
+        token_id: string;
+    };
+    query?: never;
+    url: '/me/tokens/{token_id}';
+};
+
+export type RevokeTokenErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RevokeTokenError = RevokeTokenErrors[keyof RevokeTokenErrors];
+
+export type RevokeTokenResponses = {
+    /**
+     * Response Revoke Token
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: boolean;
+    };
+};
+
+export type RevokeTokenResponse = RevokeTokenResponses[keyof RevokeTokenResponses];
 
 export type LogoutData = {
     body?: never;

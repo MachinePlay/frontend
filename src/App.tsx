@@ -7,6 +7,8 @@ import Engines from './pages/Engines'
 import EngineDetail from './pages/EngineDetail'
 import UploadInfo from './pages/UploadInfo'
 import CliToken from './pages/CliToken'
+import Register from './pages/Register'
+import UserProfile from './pages/UserProfile'
 import NotFound from './pages/NotFound'
 import { ParamStub, Stub } from './pages/Stub'
 
@@ -22,6 +24,7 @@ export default function App() {
             <Route path="engine/upload" element={<UploadInfo />} />
             <Route path="engine/:id" element={<EngineDetail />} />
             <Route path="cli" element={<CliToken />} />
+            <Route path="register" element={<Register />} />
             <Route path="tournament" element={<Stub title="tournaments" />} />
             <Route
               path="tournament/new"
@@ -31,10 +34,7 @@ export default function App() {
               path="tournament/:id"
               element={<ParamStub title="tournament" paramName="id" />}
             />
-            <Route
-              path="u/:login"
-              element={<ParamStub title="user profile" paramName="login" />}
-            />
+            <Route path="u/:login" element={<UserProfile />} />
             <Route
               path="about"
               element={

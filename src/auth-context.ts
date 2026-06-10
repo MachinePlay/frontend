@@ -6,6 +6,8 @@ export interface AuthState {
   loading: boolean
   login: () => void
   logout: () => Promise<void>
+  // Adopt a user established outside the provider (e.g. just-completed signup).
+  setUser: (user: User) => void
 }
 
 export const AuthContext = createContext<AuthState | undefined>(undefined)

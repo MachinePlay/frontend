@@ -106,6 +106,46 @@
         }
       }
     },
+    "/u/{login}": {
+      "get": {
+        "summary": "User Profile",
+        "description": "Public profile: the user, their engines, and those engines' games.",
+        "operationId": "user_profile",
+        "parameters": [
+          {
+            "name": "login",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Login"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/runners": {
       "get": {
         "summary": "List Runners",
@@ -427,6 +467,64 @@
         }
       }
     },
+    "/auth/pending": {
+      "get": {
+        "summary": "Pending Signup",
+        "description": "The GitHub profile waiting on a handle, for the /register page.",
+        "operationId": "pending_signup",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingSignupOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Register",
+        "description": "Complete a pending GitHub signup with the chosen handle.",
+        "operationId": "register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me": {
       "get": {
         "summary": "Me",
@@ -446,6 +544,27 @@
       }
     },
     "/me/tokens": {
+      "get": {
+        "summary": "List Tokens",
+        "description": "The logged-in user's API tokens (prefix + timestamps, never plaintext).",
+        "operationId": "list_tokens",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApiTokenOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Tokens"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "summary": "Create Token",
         "description": "Mint a CLI API token for the logged-in user (shown once).",
@@ -457,6 +576,50 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TokenOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/tokens/{token_id}": {
+      "delete": {
+        "summary": "Revoke Token",
+        "operationId": "revoke_token",
+        "parameters": [
+          {
+            "name": "token_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Token Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Revoke Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -489,7 +652,7 @@
     "/registry/token": {
       "get": {
         "summary": "Registry Token",
-        "description": "Docker Registry v2 token endpoint (the registry's `auth.token.realm`).\n\nAuthenticates the ``mp_`` token sent as the HTTP Basic password (written by\n``machineplay login``) and mints a signed JWT granting the requested scopes:\n``pull`` is always allowed (engines are public); ``push`` only when the\nrepository is namespaced under the authenticated user's login (or, for\nadmins, under the reserved ``machineplay`` system namespace).",
+        "description": "Docker Registry v2 token endpoint (the registry's `auth.token.realm`).\n\nAuthenticates the ``mp_`` token sent as the HTTP Basic password (written by\n``machineplay login``) and mints a signed JWT granting the requested scopes:\n``pull`` is always allowed (engines are public); ``push`` only when the\nrepository is namespaced under the authenticated user's login.",
         "operationId": "registry_token",
         "responses": {
           "200": {
@@ -508,6 +671,44 @@
   },
   "components": {
     "schemas": {
+      "ApiTokenOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "prefix": {
+            "type": "string",
+            "title": "Prefix"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "prefix",
+          "created_at",
+          "last_used_at"
+        ],
+        "title": "ApiTokenOut"
+      },
       "EngineDetailOut": {
         "properties": {
           "id": {
@@ -1118,6 +1319,50 @@
         ],
         "title": "MoveEvent"
       },
+      "PendingSignupOut": {
+        "properties": {
+          "suggested_login": {
+            "type": "string",
+            "title": "Suggested Login"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "avatar_url": {
+            "type": "string",
+            "title": "Avatar Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "suggested_login",
+          "name",
+          "avatar_url"
+        ],
+        "title": "PendingSignupOut",
+        "description": "The in-progress GitHub signup waiting for the user to pick a handle."
+      },
+      "RegisterRequest": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "title": "Login"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login"
+        ],
+        "title": "RegisterRequest"
+      },
       "RegistryTokenOut": {
         "properties": {
           "token": {
@@ -1287,6 +1532,59 @@
           "created_at"
         ],
         "title": "UserOut"
+      },
+      "UserProfileOut": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "avatar_url": {
+            "type": "string",
+            "title": "Avatar Url"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "engines": {
+            "items": {
+              "$ref": "#/components/schemas/EngineOut"
+            },
+            "type": "array",
+            "title": "Engines"
+          },
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/GameOut"
+            },
+            "type": "array",
+            "title": "Games"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login",
+          "name",
+          "avatar_url",
+          "created_at",
+          "engines",
+          "games"
+        ],
+        "title": "UserProfileOut",
+        "description": "Public profile: the user plus their engines and those engines' games."
       },
       "ValidationError": {
         "properties": {
