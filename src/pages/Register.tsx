@@ -6,6 +6,7 @@ import {
   type PendingSignup,
 } from '../api'
 import { useAuth } from '../auth-context'
+import { PrimaryButton } from '../components'
 
 // Lands here from the GitHub OAuth callback when the account is new: the
 // signup is parked server-side until the user picks a handle.
@@ -109,13 +110,13 @@ export default function Register() {
           can't be changed later.
         </p>
         {error && <p className="text-red-400 text-sm">{error}</p>}
-        <button
+        <PrimaryButton
           type="submit"
           disabled={busy || !handle.trim()}
-          className="self-start bg-neutral-100 text-neutral-900 rounded px-4 py-1.5 text-sm disabled:opacity-40"
+          className="self-start px-4 py-1.5"
         >
           {busy ? 'creating…' : 'create account'}
-        </button>
+        </PrimaryButton>
       </form>
     </div>
   )

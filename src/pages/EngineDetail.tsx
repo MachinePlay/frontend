@@ -1,45 +1,25 @@
-import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import {
-  fetchEngineByName,
-  profileUrl,
-  type EngineDetail as EngineDetailT,
-} from '../api'
+import { fetchEngineByName, profileUrl } from '../api'
+import { GameList, Hint, Section } from '../components'
+import { formatBytes } from '../format'
+import { useFetch } from '../hooks'
 import NotFound from './NotFound'
-
-function formatBytes(n: number): string {
-  if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`
-  if (n >= 1024) return `${(n / 1024).toFixed(0)} KB`
-  return `${n} B`
-}
 
 // Mounted at /{login}/{engineName}, GitHub-style.
 export default function EngineDetail() {
   const { login = '', engineName = '' } = useParams()
-  const [engine, setEngine] = useState<EngineDetailT | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    fetchEngineByName(login, engineName)
-      .then((d) => {
-        if (!cancelled) setEngine(d)
-      })
-      .catch(() => {
-        if (!cancelled) setError('engine not found')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [login, engineName])
+  const { data: engine, error } = useFetch(
+    () => fetchEngineByName(login, engineName),
+    [login, engineName],
+  )
 
   if (error) {
     return <NotFound />
   }
   if (!engine) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-10 text-neutral-500 text-sm italic">
-        loading…
+      <div className="max-w-5xl mx-auto px-4 py-10">
+        <Hint>loading…</Hint>
       </div>
     )
   }
@@ -62,12 +42,9 @@ export default function EngineDetail() {
         )}
       </div>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm uppercase tracking-wide text-neutral-500">
-          versions
-        </h2>
+      <Section title="versions">
         {engine.versions.length === 0 ? (
-          <p className="text-neutral-500 text-sm italic">no versions uploaded</p>
+          <Hint>no versions uploaded</Hint>
         ) : (
           <div className="flex flex-col gap-1">
             {engine.versions.map((v) => (
@@ -86,38 +63,11 @@ export default function EngineDetail() {
             ))}
           </div>
         )}
-      </section>
+      </Section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm uppercase tracking-wide text-neutral-500">
-          recent games
-        </h2>
-        {engine.games.length === 0 ? (
-          <p className="text-neutral-500 text-sm italic">no games yet</p>
-        ) : (
-          <div className="flex flex-col gap-1">
-            {engine.games.map((g) => (
-              <Link
-                key={g.id}
-                to={`/game/${g.id}`}
-                className="block border border-neutral-800 hover:border-neutral-600 rounded px-3 py-2 transition-colors"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium">{g.white_name}</span>
-                  <span className="text-neutral-500">vs</span>
-                  <span className="font-medium">{g.black_name}</span>
-                  <span className="ml-auto font-mono text-xs text-neutral-400">
-                    {g.result ?? '*'}
-                  </span>
-                </div>
-                <div className="text-xs text-neutral-500 mt-0.5">
-                  {new Date(g.created_at).toLocaleString()}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+      <Section title="recent games">
+        <GameList games={engine.games} />
+      </Section>
     </div>
   )
 }

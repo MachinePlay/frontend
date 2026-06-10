@@ -4,23 +4,14 @@ import type { Api } from '@lichess-org/chessground/api'
 import { Chess } from 'chess.js'
 import { Chessground } from '../Chessground'
 import {
-  API_URL,
+  fetchGame,
   gameStreamUrl,
-  type Game,
   type GameStatus,
   type StreamEvent,
 } from '../api'
+import { formatClock } from '../format'
 
 type Clocks = { white: number; black: number; updatedAt: number }
-
-function formatClock(s: number): string {
-  if (s >= 60) {
-    const m = Math.floor(s / 60)
-    const sec = Math.floor(s % 60)
-    return `${m}:${String(sec).padStart(2, '0')}`
-  }
-  return s.toFixed(1)
-}
 
 const PIECE_NAMES: Record<string, string> = {
   q: 'queen',
@@ -116,11 +107,7 @@ export default function GamePage() {
   useEffect(() => {
     if (!id) return
     let cancelled = false
-    fetch(`${API_URL}/game/${id}`)
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`error ${r.status}`)
-        return (await r.json()) as Game
-      })
+    fetchGame(id)
       .then((g) => {
         if (cancelled) return
         setWhiteName(g.white_name)
@@ -134,8 +121,9 @@ export default function GamePage() {
           updatedAt: Date.now(),
         })
       })
-      .catch((e) => {
-        if (!cancelled) setLoadError(String(e))
+      .catch((e: unknown) => {
+        if (!cancelled)
+          setLoadError(e instanceof Error ? e.message : String(e))
       })
     return () => {
       cancelled = true

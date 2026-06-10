@@ -1,20 +1,23 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import {
   createCliToken,
-  engineUrl,
   fetchTokens,
   fetchUserProfile,
   revokeToken,
   type ApiToken,
-  type UserProfile as Profile,
 } from '../api'
 import { useAuth } from '../auth-context'
+import {
+  EngineList,
+  FreshToken,
+  GameList,
+  Hint,
+  PrimaryButton,
+  Section,
+} from '../components'
+import { useFetch } from '../hooks'
 import NotFound from './NotFound'
-
-function engineLabel(login: string, name: string): string {
-  return `${login}/${name}`
-}
 
 function TokenSection() {
   const [tokens, setTokens] = useState<ApiToken[] | null>(null)
@@ -54,38 +57,32 @@ function TokenSection() {
   }
 
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-center gap-3">
-        <h2 className="text-lg font-semibold text-neutral-100">API tokens</h2>
-        <button
-          onClick={() => void generate()}
-          disabled={busy}
-          className="ml-auto bg-neutral-100 text-neutral-900 rounded px-3 py-1 text-sm disabled:opacity-40"
-        >
-          {busy ? 'generating…' : 'generate token'}
-        </button>
-      </div>
+    <Section
+      title={
+        <span className="flex items-center gap-3">
+          API tokens
+          <PrimaryButton
+            onClick={() => void generate()}
+            disabled={busy}
+            className="ml-auto normal-case tracking-normal"
+          >
+            {busy ? 'generating…' : 'generate token'}
+          </PrimaryButton>
+        </span>
+      }
+    >
       <p className="text-neutral-500 text-xs">
         Used by <span className="font-mono">machineplay login</span> to upload
         engines from your terminal.
       </p>
 
-      {fresh && (
-        <div className="flex flex-col gap-1 border border-neutral-800 rounded p-3">
-          <code className="text-sm font-mono text-neutral-200 break-all">
-            {fresh}
-          </code>
-          <p className="text-amber-500/80 text-xs">
-            Copy it now — for security it won't be shown again.
-          </p>
-        </div>
-      )}
+      {fresh && <FreshToken token={fresh} />}
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
       {tokens === null ? (
-        <p className="text-neutral-500 text-sm italic">loading…</p>
+        <Hint>loading…</Hint>
       ) : tokens.length === 0 ? (
-        <p className="text-neutral-500 text-sm italic">no tokens yet</p>
+        <Hint>no tokens yet</Hint>
       ) : (
         <div className="flex flex-col gap-2">
           {tokens.map((t) => (
@@ -109,38 +106,26 @@ function TokenSection() {
           ))}
         </div>
       )}
-    </section>
+    </Section>
   )
 }
 
 export default function UserProfile() {
   const { login = '' } = useParams()
   const { user } = useAuth()
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    fetchUserProfile(login)
-      .then((p) => {
-        if (!cancelled) setProfile(p)
-      })
-      .catch(() => {
-        if (!cancelled) setError('user not found')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [login])
+  const { data: profile, error } = useFetch(
+    () => fetchUserProfile(login),
+    [login],
+  )
 
   if (error) {
     return <NotFound />
   }
   if (profile === null) {
     return (
-      <p className="max-w-3xl mx-auto px-4 py-8 text-neutral-500 italic">
-        loading…
-      </p>
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <Hint>loading…</Hint>
+      </div>
     )
   }
 
@@ -170,66 +155,13 @@ export default function UserProfile() {
         </div>
       </header>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold text-neutral-100">engines</h2>
-        {profile.engines.length === 0 ? (
-          <p className="text-neutral-500 text-sm italic">no engines yet</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {profile.engines.map((e) => (
-              <Link
-                key={e.id}
-                to={engineUrl(e)}
-                className="block border border-neutral-800 hover:border-neutral-600 rounded px-3 py-2 transition-colors"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium text-neutral-100">
-                    {engineLabel(profile.login, e.name)}
-                  </span>
-                  <span className="ml-auto text-xs text-neutral-500">
-                    {e.version_count}{' '}
-                    {e.version_count === 1 ? 'version' : 'versions'}
-                  </span>
-                </div>
-                {e.description && (
-                  <div className="text-xs text-neutral-500 mt-0.5">
-                    {e.description}
-                  </div>
-                )}
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+      <Section title="engines">
+        <EngineList engines={profile.engines} />
+      </Section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold text-neutral-100">recent games</h2>
-        {profile.games.length === 0 ? (
-          <p className="text-neutral-500 text-sm italic">no games yet</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {profile.games.map((g) => (
-              <Link
-                key={g.id}
-                to={`/game/${g.id}`}
-                className="block border border-neutral-800 hover:border-neutral-600 rounded px-3 py-2 transition-colors"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium">{g.white_name}</span>
-                  <span className="text-neutral-500">vs</span>
-                  <span className="font-medium">{g.black_name}</span>
-                  <span className="ml-auto font-mono text-xs text-neutral-400">
-                    {g.result ?? '*'}
-                  </span>
-                </div>
-                <div className="text-xs text-neutral-500 mt-0.5">
-                  {new Date(g.created_at).toLocaleString()}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+      <Section title="recent games">
+        <GameList games={profile.games} />
+      </Section>
 
       {isOwn && <TokenSection />}
     </div>

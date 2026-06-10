@@ -7,109 +7,128 @@ import type {
   PendingSignupOut,
   RunnerOut,
   SseStreamResponse,
+  StartGameResponse,
   TokenOut,
   UserOut,
   UserProfileOut,
 } from './api/generated'
 
 export const API_URL = import.meta.env.VITE_API_URL as string
+
+export class ApiError extends Error {
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
+}
+
+// Fetch + json with the backend's error envelope surfaced as the message.
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const r = await fetch(`${API_URL}${path}`, init)
+  if (!r.ok) {
+    let message = `${init?.method ?? 'GET'} ${path} failed: ${r.status}`
+    try {
+      const body = (await r.json()) as { error?: { message?: string } }
+      message = body.error?.message ?? message
+    } catch {
+      // body wasn't json; keep the generic message
+    }
+    throw new ApiError(message, r.status)
+  }
+  return (await r.json()) as T
+}
+
+function post(body?: unknown): RequestInit {
+  return {
+    method: 'POST',
+    credentials: 'include',
+    ...(body !== undefined && {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  }
+}
+
+const nullOn401 = (e: unknown): null => {
+  if (e instanceof ApiError && e.status === 401) return null
+  throw e
+}
+
 export const gameStreamUrl = (gameId: string): string =>
   `${API_URL}/stream/game/${gameId}`
 export const liveStreamUrl = (): string => `${API_URL}/stream/live`
 
-// Kicks off the GitHub OAuth flow; the backend redirects back here when done.
+// Kicks off the GitHub OAuth flow; the backend redirects back when done.
 export const githubLoginUrl = (): string => `${API_URL}/auth/github/login`
 
-// Fetch the logged-in user, or null when the session cookie is absent/expired.
-export async function fetchMe(): Promise<User | null> {
-  const r = await fetch(`${API_URL}/me`, { credentials: 'include' })
-  if (r.status === 401) return null
-  if (!r.ok) throw new Error(`GET /me failed: ${r.status}`)
-  return (await r.json()) as User
-}
+// The logged-in user, or null when the session cookie is absent/expired.
+export const fetchMe = (): Promise<User | null> =>
+  request<User>('/me', { credentials: 'include' }).catch(nullOn401)
 
-export async function logout(): Promise<void> {
-  await fetch(`${API_URL}/auth/logout`, {
-    method: 'POST',
-    credentials: 'include',
-  })
-}
+export const logout = (): Promise<unknown> =>
+  request('/auth/logout', post())
 
-export async function fetchEngines(): Promise<Engine[]> {
-  const r = await fetch(`${API_URL}/engine`)
-  if (!r.ok) throw new Error(`GET /engine failed: ${r.status}`)
-  return (await r.json()) as Engine[]
-}
+export const fetchEngines = (): Promise<Engine[]> => request('/engine')
 
-export async function fetchEngineByName(
+export const fetchEngineByName = (
   login: string,
   name: string,
-): Promise<EngineDetail> {
-  const r = await fetch(
-    `${API_URL}/u/${encodeURIComponent(login)}/${encodeURIComponent(name)}`,
+): Promise<EngineDetail> =>
+  request(`/u/${encodeURIComponent(login)}/${encodeURIComponent(name)}`)
+
+export const fetchUserProfile = (login: string): Promise<UserProfile> =>
+  request(`/u/${encodeURIComponent(login)}`)
+
+export const fetchGames = (): Promise<Game[]> => request('/game')
+
+export const fetchGame = (id: string): Promise<Game> => request(`/game/${id}`)
+
+export const fetchRunners = (): Promise<Runner[]> => request('/runners')
+
+// Schedule a game; returns the new game id.
+export const startGame = async (
+  whiteEngineId: string,
+  blackEngineId: string,
+  runnerId: string,
+): Promise<string> => {
+  const r = await request<StartGameResponse>(
+    '/game',
+    post({
+      white_engine_id: whiteEngineId,
+      black_engine_id: blackEngineId,
+      runner_id: runnerId,
+    }),
   )
-  if (!r.ok) throw new Error(`GET /u/${login}/${name} failed: ${r.status}`)
-  return (await r.json()) as EngineDetail
+  return r.id
 }
+
+// Mint a CLI API token for the logged-in user (plaintext shown once).
+export const createCliToken = async (): Promise<string> =>
+  (await request<TokenOut>('/me/tokens', post())).token
+
+export const fetchTokens = (): Promise<ApiToken[]> =>
+  request('/me/tokens', { credentials: 'include' })
+
+export const revokeToken = (id: string): Promise<unknown> =>
+  request(`/me/tokens/${id}`, { method: 'DELETE', credentials: 'include' })
+
+// The GitHub signup waiting for a handle, or null when none is pending.
+export const fetchPendingSignup = (): Promise<PendingSignup | null> =>
+  request<PendingSignup>('/auth/pending', { credentials: 'include' }).catch(
+    nullOn401,
+  )
+
+// Complete a pending signup; throws the backend's message on a bad handle.
+export const completeSignup = (login: string): Promise<User> =>
+  request('/auth/register', post({ login }))
 
 // GitHub-style frontend URLs.
 export const profileUrl = (login: string): string => `/${login}`
 export const engineUrl = (e: { name: string; owner_login: string }): string =>
   `/${e.owner_login}/${e.name}`
-
-// Mint a CLI API token for the logged-in user (shown once). Session-authed.
-export async function createCliToken(): Promise<string> {
-  const r = await fetch(`${API_URL}/me/tokens`, {
-    method: 'POST',
-    credentials: 'include',
-  })
-  if (!r.ok) throw new Error(`POST /me/tokens failed: ${r.status}`)
-  return ((await r.json()) as TokenOut).token
-}
-
-export async function fetchTokens(): Promise<ApiToken[]> {
-  const r = await fetch(`${API_URL}/me/tokens`, { credentials: 'include' })
-  if (!r.ok) throw new Error(`GET /me/tokens failed: ${r.status}`)
-  return (await r.json()) as ApiToken[]
-}
-
-export async function revokeToken(id: string): Promise<void> {
-  const r = await fetch(`${API_URL}/me/tokens/${id}`, {
-    method: 'DELETE',
-    credentials: 'include',
-  })
-  if (!r.ok) throw new Error(`DELETE /me/tokens/${id} failed: ${r.status}`)
-}
-
-// The GitHub signup waiting for a handle, or null when none is pending.
-export async function fetchPendingSignup(): Promise<PendingSignup | null> {
-  const r = await fetch(`${API_URL}/auth/pending`, { credentials: 'include' })
-  if (r.status === 401) return null
-  if (!r.ok) throw new Error(`GET /auth/pending failed: ${r.status}`)
-  return (await r.json()) as PendingSignup
-}
-
-// Complete a pending signup with the chosen handle. Throws the backend's
-// error message (taken/invalid handle) so the form can show it.
-export async function completeSignup(login: string): Promise<User> {
-  const r = await fetch(`${API_URL}/auth/register`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ login }),
-  })
-  const body = await r.json()
-  if (!r.ok) {
-    throw new Error(body?.error?.message ?? `registration failed: ${r.status}`)
-  }
-  return body as User
-}
-
-export async function fetchUserProfile(login: string): Promise<UserProfile> {
-  const r = await fetch(`${API_URL}/u/${encodeURIComponent(login)}`)
-  if (!r.ok) throw new Error(`GET /u/${login} failed: ${r.status}`)
-  return (await r.json()) as UserProfile
-}
+export const gameUrl = (id: string): string => `/game/${id}`
 
 export const START_FEN =
   'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
