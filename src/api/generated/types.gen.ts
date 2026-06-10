@@ -45,7 +45,7 @@ export type EngineDetailOut = {
     /**
      * Owner Login
      */
-    owner_login: string | null;
+    owner_login: string;
     /**
      * Created At
      */
@@ -79,7 +79,7 @@ export type EngineOut = {
     /**
      * Owner Login
      */
-    owner_login?: string | null;
+    owner_login: string;
     /**
      * Version Count
      */
@@ -127,7 +127,7 @@ export type EngineRegisterResponse = {
     /**
      * Owner Login
      */
-    owner_login: string | null;
+    owner_login: string;
     /**
      * Version
      */
@@ -622,36 +622,6 @@ export type ListEnginesResponses = {
 };
 
 export type ListEnginesResponse = ListEnginesResponses[keyof ListEnginesResponses];
-
-export type GetEngineData = {
-    body?: never;
-    path: {
-        /**
-         * Engine Id
-         */
-        engine_id: string;
-    };
-    query?: never;
-    url: '/engine/{engine_id}';
-};
-
-export type GetEngineErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetEngineError = GetEngineErrors[keyof GetEngineErrors];
-
-export type GetEngineResponses = {
-    /**
-     * Successful Response
-     */
-    200: EngineDetailOut;
-};
-
-export type GetEngineResponse = GetEngineResponses[keyof GetEngineResponses];
 
 export type RegisterEngineData = {
     body: EngineRegisterRequest;

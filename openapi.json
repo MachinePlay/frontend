@@ -27,46 +27,6 @@
         }
       }
     },
-    "/engine/{engine_id}": {
-      "get": {
-        "summary": "Get Engine",
-        "operationId": "get_engine",
-        "parameters": [
-          {
-            "name": "engine_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Engine Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EngineDetailOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/engine/register": {
       "post": {
         "summary": "Register Engine",
@@ -774,14 +734,7 @@
             "title": "Description"
           },
           "owner_login": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Owner Login"
           },
           "created_at": {
@@ -832,14 +785,7 @@
             "title": "Description"
           },
           "owner_login": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Owner Login"
           },
           "version_count": {
@@ -852,7 +798,8 @@
         "required": [
           "id",
           "name",
-          "description"
+          "description",
+          "owner_login"
         ],
         "title": "EngineOut"
       },
@@ -901,14 +848,7 @@
             "title": "Name"
           },
           "owner_login": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Owner Login"
           },
           "version": {

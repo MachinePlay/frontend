@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { engineUrl, fetchEngines, type Engine } from '../api'
 
 function engineLabel(e: Engine): string {
-  return e.owner_login ? `${e.owner_login}/${e.name}` : e.name
+  return `${e.owner_login}/${e.name}`
 }
 
 export default function Engines() {

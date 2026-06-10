@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router'
+import { BrowserRouter, Route, Routes } from 'react-router'
 import Layout from './Layout'
 import { AuthProvider } from './auth'
 import Home from './pages/Home'
@@ -12,12 +12,6 @@ import UserProfile from './pages/UserProfile'
 import NotFound from './pages/NotFound'
 import { ParamStub, Stub } from './pages/Stub'
 
-// Profiles moved from /u/{login} to /{login}; keep old links working.
-function LegacyProfileRedirect() {
-  const { login = '' } = useParams()
-  return <Navigate to={`/${login}`} replace />
-}
-
 export default function App() {
   return (
     <AuthProvider>
@@ -28,7 +22,6 @@ export default function App() {
             <Route path="game/:id" element={<GamePage />} />
             <Route path="engine" element={<Engines />} />
             <Route path="engine/upload" element={<UploadInfo />} />
-            <Route path="engine/:id" element={<EngineDetail />} />
             <Route path="cli" element={<CliToken />} />
             <Route path="register" element={<Register />} />
             <Route path="tournament" element={<Stub title="tournaments" />} />
@@ -40,7 +33,6 @@ export default function App() {
               path="tournament/:id"
               element={<ParamStub title="tournament" paramName="id" />}
             />
-            <Route path="u/:login" element={<LegacyProfileRedirect />} />
             <Route
               path="about"
               element={

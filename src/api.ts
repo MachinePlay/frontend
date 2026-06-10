@@ -41,12 +41,6 @@ export async function fetchEngines(): Promise<Engine[]> {
   return (await r.json()) as Engine[]
 }
 
-export async function fetchEngine(id: string): Promise<EngineDetail> {
-  const r = await fetch(`${API_URL}/engine/${id}`)
-  if (!r.ok) throw new Error(`GET /engine/${id} failed: ${r.status}`)
-  return (await r.json()) as EngineDetail
-}
-
 export async function fetchEngineByName(
   login: string,
   name: string,
@@ -58,14 +52,10 @@ export async function fetchEngineByName(
   return (await r.json()) as EngineDetail
 }
 
-// GitHub-style canonical frontend URLs. Ownerless engines (none in practice)
-// fall back to the id route.
+// GitHub-style frontend URLs.
 export const profileUrl = (login: string): string => `/${login}`
-export const engineUrl = (e: {
-  id: string
-  name: string
-  owner_login?: string | null
-}): string => (e.owner_login ? `/${e.owner_login}/${e.name}` : `/engine/${e.id}`)
+export const engineUrl = (e: { name: string; owner_login: string }): string =>
+  `/${e.owner_login}/${e.name}`
 
 // Mint a CLI API token for the logged-in user (shown once). Session-authed.
 export async function createCliToken(): Promise<string> {

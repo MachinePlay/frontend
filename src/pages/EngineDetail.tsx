@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import {
-  engineUrl,
-  fetchEngine,
   fetchEngineByName,
   profileUrl,
   type EngineDetail as EngineDetailT,
@@ -15,22 +13,15 @@ function formatBytes(n: number): string {
   return `${n} B`
 }
 
-// Mounted both at /{login}/{engineName} (canonical, GitHub-style) and the
-// legacy /engine/{id}, which redirects to the canonical URL once loaded.
+// Mounted at /{login}/{engineName}, GitHub-style.
 export default function EngineDetail() {
-  const { id, login, engineName } = useParams()
+  const { login = '', engineName = '' } = useParams()
   const [engine, setEngine] = useState<EngineDetailT | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    const load =
-      login && engineName
-        ? fetchEngineByName(login, engineName)
-        : id
-          ? fetchEngine(id)
-          : Promise.reject(new Error('missing params'))
-    load
+    fetchEngineByName(login, engineName)
       .then((d) => {
         if (!cancelled) setEngine(d)
       })
@@ -40,7 +31,7 @@ export default function EngineDetail() {
     return () => {
       cancelled = true
     }
-  }, [id, login, engineName])
+  }, [login, engineName])
 
   if (error) {
     return <NotFound />
@@ -53,26 +44,17 @@ export default function EngineDetail() {
     )
   }
 
-  // Legacy id URL: hop to the canonical owner/name URL.
-  if (id && engine.owner_login) {
-    return <Navigate to={engineUrl(engine)} replace />
-  }
-
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-5">
       <div className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold text-neutral-100">
-          {engine.owner_login && (
-            <>
-              <Link
-                to={profileUrl(engine.owner_login)}
-                className="text-neutral-400 hover:text-neutral-100 transition-colors"
-              >
-                {engine.owner_login}
-              </Link>
-              <span className="text-neutral-600"> / </span>
-            </>
-          )}
+          <Link
+            to={profileUrl(engine.owner_login)}
+            className="text-neutral-400 hover:text-neutral-100 transition-colors"
+          >
+            {engine.owner_login}
+          </Link>
+          <span className="text-neutral-600"> / </span>
           {engine.name}
         </h1>
         {engine.description && (
