@@ -1068,25 +1068,11 @@
             "title": "Black Name"
           },
           "white_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "White Version"
           },
           "black_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Black Version"
           },
           "status": {

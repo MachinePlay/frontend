@@ -116,8 +116,8 @@ export default function GamePage() {
         if (cancelled) return
         setWhiteName(g.white_name)
         setBlackName(g.black_name)
-        setWhiteVersion(g.white_version ?? null)
-        setBlackVersion(g.black_version ?? null)
+        setWhiteVersion(g.white_version)
+        setBlackVersion(g.black_version)
         setMoves(g.moves)
         setResult(g.result)
         setGameStatus(g.status)

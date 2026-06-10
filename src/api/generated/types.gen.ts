@@ -260,11 +260,11 @@ export type GameOut = {
     /**
      * White Version
      */
-    white_version: string | null;
+    white_version: string;
     /**
      * Black Version
      */
-    black_version: string | null;
+    black_version: string;
     status: GameStatus;
     /**
      * Result
