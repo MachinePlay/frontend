@@ -1,17 +1,17 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { fetchEngineByName, profileUrl } from '../api'
 import { GameList, Hint, Section } from '../components'
 import { formatBytes } from '../format'
-import { useFetch } from '../hooks'
 import NotFound from './NotFound'
 
 // Mounted at /{login}/{engineName}, GitHub-style.
 export default function EngineDetail() {
   const { login = '', engineName = '' } = useParams()
-  const { data: engine, error } = useFetch(
-    () => fetchEngineByName(login, engineName),
-    [login, engineName],
-  )
+  const { data: engine, error } = useQuery({
+    queryKey: ['engine', login, engineName],
+    queryFn: () => fetchEngineByName(login, engineName),
+  })
 
   if (error) {
     return <NotFound />

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useParams } from 'react-router'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createCliToken,
   fetchTokens,
@@ -16,43 +17,41 @@ import {
   PrimaryButton,
   Section,
 } from '../components'
-import { useFetch } from '../hooks'
 import NotFound from './NotFound'
 
 function TokenSection() {
-  const [tokens, setTokens] = useState<ApiToken[] | null>(null)
+  const queryClient = useQueryClient()
+  const { data: tokens, error: loadError } = useQuery({
+    queryKey: ['tokens'],
+    queryFn: fetchTokens,
+  })
   const [fresh, setFresh] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const reload = () => {
-    fetchTokens()
-      .then(setTokens)
-      .catch(() => setError('failed to load tokens'))
-  }
-
-  useEffect(reload, [])
+  const [actionError, setActionError] = useState<string | null>(null)
+  const error = actionError ?? (loadError ? 'failed to load tokens' : null)
 
   const generate = async () => {
     setBusy(true)
-    setError(null)
+    setActionError(null)
     try {
       setFresh(await createCliToken())
-      reload()
+      await queryClient.invalidateQueries({ queryKey: ['tokens'] })
     } catch {
-      setError('could not create a token')
+      setActionError('could not create a token')
     } finally {
       setBusy(false)
     }
   }
 
   const revoke = async (id: string) => {
-    setError(null)
+    setActionError(null)
     try {
       await revokeToken(id)
-      setTokens((t) => t?.filter((tok) => tok.id !== id) ?? null)
+      queryClient.setQueryData<ApiToken[]>(['tokens'], (t) =>
+        t?.filter((tok) => tok.id !== id),
+      )
     } catch {
-      setError('could not revoke the token')
+      setActionError('could not revoke the token')
     }
   }
 
@@ -79,7 +78,7 @@ function TokenSection() {
       {fresh && <FreshToken token={fresh} />}
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
-      {tokens === null ? (
+      {tokens === undefined ? (
         <Hint>loading…</Hint>
       ) : tokens.length === 0 ? (
         <Hint>no tokens yet</Hint>
@@ -113,15 +112,15 @@ function TokenSection() {
 export default function UserProfile() {
   const { login = '' } = useParams()
   const { user } = useAuth()
-  const { data: profile, error } = useFetch(
-    () => fetchUserProfile(login),
-    [login],
-  )
+  const { data: profile, error } = useQuery({
+    queryKey: ['profile', login],
+    queryFn: () => fetchUserProfile(login),
+  })
 
   if (error) {
     return <NotFound />
   }
-  if (profile === null) {
+  if (profile === undefined) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
         <Hint>loading…</Hint>

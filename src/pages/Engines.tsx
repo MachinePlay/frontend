@@ -1,10 +1,13 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { fetchEngines } from '../api'
 import { EngineList, Hint } from '../components'
-import { useFetch } from '../hooks'
 
 export default function Engines() {
-  const { data: engines, error } = useFetch(fetchEngines, [])
+  const { data: engines, error } = useQuery({
+    queryKey: ['engines'],
+    queryFn: fetchEngines,
+  })
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-4">
@@ -19,7 +22,7 @@ export default function Engines() {
       </div>
       {error ? (
         <p className="text-red-400 text-sm">failed to load engines</p>
-      ) : engines === null ? (
+      ) : engines === undefined ? (
         <Hint>loading…</Hint>
       ) : (
         <EngineList engines={engines} />

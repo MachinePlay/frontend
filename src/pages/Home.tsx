@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Chessground } from '../Chessground'
 import { useAuth } from '../auth-context'
 import {
@@ -9,10 +10,8 @@ import {
   gameUrl,
   liveStreamUrl,
   startGame as apiStartGame,
-  type Engine,
   type Game,
   type LiveStreamEvent,
-  type Runner,
 } from '../api'
 import { GameList, Hint, PrimaryButton, Section } from '../components'
 import { applyLiveEvent } from '../live'
@@ -81,60 +80,44 @@ function EngineSelect({
 
 export default function Home() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user, login } = useAuth()
-  const [engines, setEngines] = useState<Engine[]>([])
-  const [runners, setRunners] = useState<Runner[]>([])
-  const [whiteId, setWhiteId] = useState('')
-  const [blackId, setBlackId] = useState('')
-  const [runnerId, setRunnerId] = useState('')
+  const { data: engines = [] } = useQuery({
+    queryKey: ['engines'],
+    queryFn: fetchEngines,
+  })
+  const { data: runners = [] } = useQuery({
+    queryKey: ['runners'],
+    queryFn: fetchRunners,
+    staleTime: 5_000,
+  })
+  const { data: games, error: gamesError } = useQuery({
+    queryKey: ['games'],
+    queryFn: fetchGames,
+  })
+  // '' means "use the default" so the selects work as soon as data arrives.
+  const [whiteSel, setWhiteSel] = useState('')
+  const [blackSel, setBlackSel] = useState('')
+  const [runnerSel, setRunnerSel] = useState('')
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
-  const [games, setGames] = useState<Game[] | null>(null)
-  const [gamesError, setGamesError] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchEngines()
-      .then((data) => {
-        setEngines(data)
-        if (data.length > 0) {
-          setWhiteId(data[0].id)
-          setBlackId(data[Math.min(1, data.length - 1)].id)
-        }
-      })
-      .catch(() => setStartError('failed to load engines'))
-  }, [])
+  const whiteId = whiteSel || engines[0]?.id || ''
+  const blackId = blackSel || engines[Math.min(1, engines.length - 1)]?.id || ''
+  const runnerId = runnerSel || runners[0]?.runner_id || ''
 
-  useEffect(() => {
-    fetchRunners()
-      .then((data) => {
-        setRunners(data)
-        if (data.length > 0) setRunnerId(data[0].runner_id)
-      })
-      .catch(() => setStartError('failed to load runners'))
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    fetchGames()
-      .then((data) => {
-        if (!cancelled) setGames(data)
-      })
-      .catch(() => {
-        if (!cancelled) setGamesError('failed to load games')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
+  // Live events update the shared ['games'] cache, so this page and any
+  // revisit render the freshest state without refetching.
   useEffect(() => {
     const es = new EventSource(liveStreamUrl())
     es.onmessage = (e) => {
       const event: LiveStreamEvent = JSON.parse(e.data)
-      setGames((prev) => (prev ? applyLiveEvent(prev, event) : prev))
+      queryClient.setQueryData<Game[]>(['games'], (prev) =>
+        prev ? applyLiveEvent(prev, event) : prev,
+      )
     }
     return () => es.close()
-  }, [])
+  }, [queryClient])
 
   const startGame = async () => {
     if (!whiteId || !blackId || !runnerId) return
@@ -157,14 +140,14 @@ export default function Home() {
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-8">
       <Section title="new game">
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center text-sm">
-          <EngineSelect label="white" value={whiteId} onChange={setWhiteId}>
+          <EngineSelect label="white" value={whiteId} onChange={setWhiteSel}>
             {engines.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.name}
               </option>
             ))}
           </EngineSelect>
-          <EngineSelect label="black" value={blackId} onChange={setBlackId}>
+          <EngineSelect label="black" value={blackId} onChange={setBlackSel}>
             {engines.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.name}
@@ -174,7 +157,7 @@ export default function Home() {
           <EngineSelect
             label="runner"
             value={runnerId}
-            onChange={setRunnerId}
+            onChange={setRunnerSel}
             disabled={runners.length === 0}
           >
             {runners.length === 0 ? (
@@ -225,7 +208,7 @@ export default function Home() {
           </>
         }
       >
-        {games === null ? (
+        {games === undefined ? (
           <Hint>loading…</Hint>
         ) : live.length === 0 ? (
           <Hint>no live games</Hint>
@@ -240,8 +223,8 @@ export default function Home() {
 
       <Section title="recent">
         {gamesError ? (
-          <p className="text-red-400 text-sm">{gamesError}</p>
-        ) : games === null ? (
+          <p className="text-red-400 text-sm">failed to load games</p>
+        ) : games === undefined ? (
           <Hint>loading…</Hint>
         ) : (
           <GameList games={recent} />
