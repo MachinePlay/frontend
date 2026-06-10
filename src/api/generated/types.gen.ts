@@ -257,6 +257,14 @@ export type GameOut = {
      * Black Name
      */
     black_name: string;
+    /**
+     * White Version
+     */
+    white_version: string | null;
+    /**
+     * Black Version
+     */
+    black_version: string | null;
     status: GameStatus;
     /**
      * Result
@@ -477,6 +485,14 @@ export type StartGameRequest = {
      * Runner Id
      */
     runner_id: string;
+    /**
+     * White Version Id
+     */
+    white_version_id?: string | null;
+    /**
+     * Black Version Id
+     */
+    black_version_id?: string | null;
 };
 
 /**

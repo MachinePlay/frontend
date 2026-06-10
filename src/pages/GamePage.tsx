@@ -85,6 +85,10 @@ export default function GamePage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [whiteName, setWhiteName] = useState<string | null>(null)
   const [blackName, setBlackName] = useState<string | null>(null)
+  // Which uploaded version each side plays; from the initial fetch only
+  // (stream events don't carry it, and it never changes mid-game).
+  const [whiteVersion, setWhiteVersion] = useState<string | null>(null)
+  const [blackVersion, setBlackVersion] = useState<string | null>(null)
   const [moves, setMoves] = useState<string[]>([])
   const [result, setResult] = useState<string | null>(null)
   const [orientation, setOrientation] = useState<'white' | 'black'>('white')
@@ -112,6 +116,8 @@ export default function GamePage() {
         if (cancelled) return
         setWhiteName(g.white_name)
         setBlackName(g.black_name)
+        setWhiteVersion(g.white_version ?? null)
+        setBlackVersion(g.black_version ?? null)
         setMoves(g.moves)
         setResult(g.result)
         setGameStatus(g.status)
@@ -256,6 +262,8 @@ export default function GamePage() {
   const topIsBlack = orientation === 'white'
   const topName = topIsBlack ? blackName : whiteName
   const bottomName = topIsBlack ? whiteName : blackName
+  const topVersion = topIsBlack ? blackVersion : whiteVersion
+  const bottomVersion = topIsBlack ? whiteVersion : blackVersion
   const topCaptured = topIsBlack ? byBlack : byWhite
   const bottomCaptured = topIsBlack ? byWhite : byBlack
   const topClock = topIsBlack ? displayBlack : displayWhite
@@ -286,6 +294,11 @@ export default function GamePage() {
             {topIsBlack ? 'black' : 'white'}
           </span>
           <span className="text-neutral-100 font-medium">{topName ?? '—'}</span>
+          {topVersion && (
+            <span className="text-neutral-500 text-xs font-mono">
+              {topVersion}
+            </span>
+          )}
           <CapturedPieces pieces={topCaptured} />
           {showClocks && topClock !== null && (
             <span
@@ -346,6 +359,11 @@ export default function GamePage() {
           <span className="text-neutral-100 font-medium">
             {bottomName ?? '—'}
           </span>
+          {bottomVersion && (
+            <span className="text-neutral-500 text-xs font-mono">
+              {bottomVersion}
+            </span>
+          )}
           <CapturedPieces pieces={bottomCaptured} />
           {showClocks && bottomClock !== null && (
             <span

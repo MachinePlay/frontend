@@ -1067,6 +1067,28 @@
             "type": "string",
             "title": "Black Name"
           },
+          "white_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "White Version"
+          },
+          "black_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Black Version"
+          },
           "status": {
             "$ref": "#/components/schemas/GameStatus"
           },
@@ -1136,6 +1158,8 @@
           "black_id",
           "white_name",
           "black_name",
+          "white_version",
+          "black_version",
           "status",
           "result",
           "moves",
@@ -1424,6 +1448,30 @@
             "type": "string",
             "format": "uuid",
             "title": "Runner Id"
+          },
+          "white_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "White Version Id"
+          },
+          "black_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Black Version Id"
           }
         },
         "type": "object",

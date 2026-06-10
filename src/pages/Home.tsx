@@ -4,12 +4,15 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Chessground } from '../Chessground'
 import { useAuth } from '../auth-context'
 import {
+  fetchEngineByName,
   fetchEngines,
   fetchGames,
   fetchRunners,
   gameUrl,
   liveStreamUrl,
   startGame as apiStartGame,
+  type Engine,
+  type EngineVersion,
   type Game,
   type LiveStreamEvent,
 } from '../api'
@@ -50,31 +53,67 @@ function LiveGameCard({ game }: { game: Game }) {
   )
 }
 
-function EngineSelect({
+const selectClass = 'bg-neutral-900 border border-neutral-800 rounded px-2 py-1'
+
+// Versions of the selected engine, shared with the engine page's cache entry.
+function useEngineVersions(engine: Engine | undefined): EngineVersion[] {
+  const { data } = useQuery({
+    queryKey: ['engine', engine?.owner_login ?? '', engine?.name ?? ''],
+    queryFn: () => fetchEngineByName(engine!.owner_login, engine!.name),
+    enabled: engine !== undefined,
+    select: (d) => d.versions,
+  })
+  return data ?? []
+}
+
+function SideRow({
   label,
-  value,
-  onChange,
-  children,
-  disabled,
+  engines,
+  engineId,
+  onEngine,
+  versions,
+  versionId,
+  onVersion,
 }: {
   label: string
-  value: string
-  onChange: (value: string) => void
-  children: React.ReactNode
-  disabled?: boolean
+  engines: Engine[]
+  engineId: string
+  onEngine: (id: string) => void
+  versions: EngineVersion[]
+  versionId: string
+  onVersion: (id: string) => void
 }) {
   return (
-    <label className="flex items-center gap-2">
+    <div className="flex items-center gap-2">
       <span className="text-neutral-400 w-12">{label}</span>
       <select
-        className="bg-neutral-900 border border-neutral-800 rounded px-2 py-1 flex-1"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
+        className={`${selectClass} flex-1 min-w-0`}
+        value={engineId}
+        onChange={(e) => onEngine(e.target.value)}
       >
-        {children}
+        {engines.map((e) => (
+          <option key={e.id} value={e.id}>
+            {e.name}
+          </option>
+        ))}
       </select>
-    </label>
+      <select
+        className={`${selectClass} w-28`}
+        value={versionId}
+        onChange={(e) => onVersion(e.target.value)}
+        disabled={versions.length === 0}
+      >
+        {versions.length === 0 ? (
+          <option value="">version</option>
+        ) : (
+          versions.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.version}
+            </option>
+          ))
+        )}
+      </select>
+    </div>
   )
 }
 
@@ -98,6 +137,8 @@ export default function Home() {
   // '' means "use the default" so the selects work as soon as data arrives.
   const [whiteSel, setWhiteSel] = useState('')
   const [blackSel, setBlackSel] = useState('')
+  const [whiteVerSel, setWhiteVerSel] = useState('')
+  const [blackVerSel, setBlackVerSel] = useState('')
   const [runnerSel, setRunnerSel] = useState('')
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
@@ -105,6 +146,12 @@ export default function Home() {
   const whiteId = whiteSel || engines[0]?.id || ''
   const blackId = blackSel || engines[Math.min(1, engines.length - 1)]?.id || ''
   const runnerId = runnerSel || runners[0]?.runner_id || ''
+
+  const whiteVersions = useEngineVersions(engines.find((e) => e.id === whiteId))
+  const blackVersions = useEngineVersions(engines.find((e) => e.id === blackId))
+  // Versions are sorted newest-first, so the default ('') is the latest.
+  const whiteVersionId = whiteVerSel || whiteVersions[0]?.id || ''
+  const blackVersionId = blackVerSel || blackVersions[0]?.id || ''
 
   // Live events update the shared ['games'] cache, so this page and any
   // revisit render the freshest state without refetching.
@@ -124,7 +171,14 @@ export default function Home() {
     setStarting(true)
     setStartError(null)
     try {
-      navigate(gameUrl(await apiStartGame(whiteId, blackId, runnerId)))
+      const id = await apiStartGame({
+        whiteEngineId: whiteId,
+        blackEngineId: blackId,
+        runnerId,
+        whiteVersionId: whiteVersionId || undefined,
+        blackVersionId: blackVersionId || undefined,
+      })
+      navigate(gameUrl(id))
     } catch (e) {
       setStartError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -139,59 +193,71 @@ export default function Home() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-8">
       <Section title="new game">
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center text-sm">
-          <EngineSelect label="white" value={whiteId} onChange={setWhiteSel}>
-            {engines.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name}
-              </option>
-            ))}
-          </EngineSelect>
-          <EngineSelect label="black" value={blackId} onChange={setBlackSel}>
-            {engines.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name}
-              </option>
-            ))}
-          </EngineSelect>
-          <EngineSelect
-            label="runner"
-            value={runnerId}
-            onChange={setRunnerSel}
-            disabled={runners.length === 0}
-          >
-            {runners.length === 0 ? (
-              <option value="">no runners connected</option>
-            ) : (
-              runners.map((r) => (
-                <option key={r.runner_id} value={r.runner_id}>
-                  {r.name}
-                </option>
-              ))
-            )}
-          </EngineSelect>
-          {user ? (
-            <PrimaryButton
-              onClick={() => void startGame()}
-              disabled={
-                starting ||
-                engines.length === 0 ||
-                !whiteId ||
-                !blackId ||
-                !runnerId
-              }
+        <div className="flex flex-col gap-2 text-sm max-w-xl">
+          <SideRow
+            label="white"
+            engines={engines}
+            engineId={whiteId}
+            onEngine={(id) => {
+              setWhiteSel(id)
+              setWhiteVerSel('')
+            }}
+            versions={whiteVersions}
+            versionId={whiteVersionId}
+            onVersion={setWhiteVerSel}
+          />
+          <SideRow
+            label="black"
+            engines={engines}
+            engineId={blackId}
+            onEngine={(id) => {
+              setBlackSel(id)
+              setBlackVerSel('')
+            }}
+            versions={blackVersions}
+            versionId={blackVersionId}
+            onVersion={setBlackVerSel}
+          />
+          <div className="flex items-center gap-2">
+            <span className="text-neutral-400 w-12">runner</span>
+            <select
+              className={`${selectClass} flex-1 min-w-0`}
+              value={runnerId}
+              onChange={(e) => setRunnerSel(e.target.value)}
+              disabled={runners.length === 0}
             >
-              {starting ? 'starting…' : 'start game'}
-            </PrimaryButton>
-          ) : (
-            <PrimaryButton onClick={login}>
-              sign in to start a game
-            </PrimaryButton>
-          )}
+              {runners.length === 0 ? (
+                <option value="">no runners connected</option>
+              ) : (
+                runners.map((r) => (
+                  <option key={r.runner_id} value={r.runner_id}>
+                    {r.name}
+                  </option>
+                ))
+              )}
+            </select>
+            {user ? (
+              <PrimaryButton
+                onClick={() => void startGame()}
+                disabled={
+                  starting ||
+                  engines.length === 0 ||
+                  !whiteId ||
+                  !blackId ||
+                  !runnerId
+                }
+                className="shrink-0"
+              >
+                {starting ? 'starting…' : 'start game'}
+              </PrimaryButton>
+            ) : (
+              <PrimaryButton onClick={login} className="shrink-0">
+                sign in to start a game
+              </PrimaryButton>
+            )}
+          </div>
           {startError && (
-            <span className="text-red-400 text-xs self-center">
-              {startError}
-            </span>
+            <span className="text-red-400 text-xs">{startError}</span>
           )}
         </div>
       </Section>

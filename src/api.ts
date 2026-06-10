@@ -87,18 +87,23 @@ export const fetchGame = (id: string): Promise<Game> => request(`/game/${id}`)
 
 export const fetchRunners = (): Promise<Runner[]> => request('/runners')
 
-// Schedule a game; returns the new game id.
-export const startGame = async (
-  whiteEngineId: string,
-  blackEngineId: string,
-  runnerId: string,
-): Promise<string> => {
+// Schedule a game; returns the new game id. Version ids are optional —
+// the backend defaults each side to the engine's latest upload.
+export const startGame = async (req: {
+  whiteEngineId: string
+  blackEngineId: string
+  runnerId: string
+  whiteVersionId?: string
+  blackVersionId?: string
+}): Promise<string> => {
   const r = await request<StartGameResponse>(
     '/game',
     post({
-      white_engine_id: whiteEngineId,
-      black_engine_id: blackEngineId,
-      runner_id: runnerId,
+      white_engine_id: req.whiteEngineId,
+      black_engine_id: req.blackEngineId,
+      runner_id: req.runnerId,
+      white_version_id: req.whiteVersionId ?? null,
+      black_version_id: req.blackVersionId ?? null,
     }),
   )
   return r.id

@@ -7,6 +7,8 @@ function freshGame(id: string, partial: Partial<Game>): Game {
     black_id: '',
     white_name: '',
     black_name: '',
+    white_version: null,
+    black_version: null,
     status: 'playing',
     result: null,
     moves: [],
