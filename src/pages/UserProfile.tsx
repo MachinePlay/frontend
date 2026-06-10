@@ -36,8 +36,10 @@ function TokenSection() {
     try {
       setFresh(await createCliToken())
       await queryClient.invalidateQueries({ queryKey: ['tokens'] })
-    } catch {
-      setActionError('could not create a token')
+    } catch (e) {
+      setActionError(
+        `could not create a token (${e instanceof Error ? e.message : e})`,
+      )
     } finally {
       setBusy(false)
     }
@@ -50,8 +52,10 @@ function TokenSection() {
       queryClient.setQueryData<ApiToken[]>(['tokens'], (t) =>
         t?.filter((tok) => tok.id !== id),
       )
-    } catch {
-      setActionError('could not revoke the token')
+    } catch (e) {
+      setActionError(
+        `could not revoke the token (${e instanceof Error ? e.message : e})`,
+      )
     }
   }
 
