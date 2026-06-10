@@ -33,7 +33,7 @@ function AuthSlot() {
 
   return (
     <div className="ml-auto flex items-center gap-2">
-      <NavLink to={`/u/${user.login}`} className="flex items-center gap-2">
+      <NavLink to={`/${user.login}`} className="flex items-center gap-2">
         {user.avatar_url && (
           <img
             src={user.avatar_url}

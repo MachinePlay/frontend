@@ -54,6 +54,10 @@ export type EngineDetailOut = {
      * Versions
      */
     versions: Array<EngineVersionOut>;
+    /**
+     * Games
+     */
+    games: Array<GameOut>;
 };
 
 /**
@@ -703,6 +707,40 @@ export type UserProfileResponses = {
 };
 
 export type UserProfileResponse = UserProfileResponses[keyof UserProfileResponses];
+
+export type GetEngineByNameData = {
+    body?: never;
+    path: {
+        /**
+         * Login
+         */
+        login: string;
+        /**
+         * Engine Name
+         */
+        engine_name: string;
+    };
+    query?: never;
+    url: '/u/{login}/{engine_name}';
+};
+
+export type GetEngineByNameErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetEngineByNameError = GetEngineByNameErrors[keyof GetEngineByNameErrors];
+
+export type GetEngineByNameResponses = {
+    /**
+     * Successful Response
+     */
+    200: EngineDetailOut;
+};
+
+export type GetEngineByNameResponse = GetEngineByNameResponses[keyof GetEngineByNameResponses];
 
 export type ListRunnersData = {
     body?: never;

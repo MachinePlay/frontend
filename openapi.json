@@ -146,6 +146,55 @@
         }
       }
     },
+    "/u/{login}/{engine_name}": {
+      "get": {
+        "summary": "Get Engine By Name",
+        "description": "Engine detail addressed GitHub-style: owner handle + engine name.",
+        "operationId": "get_engine_by_name",
+        "parameters": [
+          {
+            "name": "login",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Login"
+            }
+          },
+          {
+            "name": "engine_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Engine Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngineDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/runners": {
       "get": {
         "summary": "List Runners",
@@ -746,6 +795,13 @@
             },
             "type": "array",
             "title": "Versions"
+          },
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/GameOut"
+            },
+            "type": "array",
+            "title": "Games"
           }
         },
         "type": "object",
@@ -755,7 +811,8 @@
           "description",
           "owner_login",
           "created_at",
-          "versions"
+          "versions",
+          "games"
         ],
         "title": "EngineDetailOut"
       },

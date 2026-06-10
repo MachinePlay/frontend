@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router'
-import { fetchEngine, type EngineDetail as EngineDetailT } from '../api'
+import { Link, Navigate, useParams } from 'react-router'
+import {
+  engineUrl,
+  fetchEngine,
+  fetchEngineByName,
+  profileUrl,
+  type EngineDetail as EngineDetailT,
+} from '../api'
+import NotFound from './NotFound'
 
 function formatBytes(n: number): string {
   if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`
@@ -8,15 +15,22 @@ function formatBytes(n: number): string {
   return `${n} B`
 }
 
+// Mounted both at /{login}/{engineName} (canonical, GitHub-style) and the
+// legacy /engine/{id}, which redirects to the canonical URL once loaded.
 export default function EngineDetail() {
-  const { id } = useParams()
+  const { id, login, engineName } = useParams()
   const [engine, setEngine] = useState<EngineDetailT | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!id) return
     let cancelled = false
-    fetchEngine(id)
+    const load =
+      login && engineName
+        ? fetchEngineByName(login, engineName)
+        : id
+          ? fetchEngine(id)
+          : Promise.reject(new Error('missing params'))
+    load
       .then((d) => {
         if (!cancelled) setEngine(d)
       })
@@ -26,14 +40,10 @@ export default function EngineDetail() {
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, login, engineName])
 
   if (error) {
-    return (
-      <div className="max-w-5xl mx-auto px-4 py-10 text-red-400 text-sm">
-        {error}
-      </div>
-    )
+    return <NotFound />
   }
   if (!engine) {
     return (
@@ -43,23 +53,32 @@ export default function EngineDetail() {
     )
   }
 
-  const label = engine.owner_login
-    ? `${engine.owner_login}/${engine.name}`
-    : engine.name
+  // Legacy id URL: hop to the canonical owner/name URL.
+  if (id && engine.owner_login) {
+    return <Navigate to={engineUrl(engine)} replace />
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-5">
       <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold text-neutral-100">{label}</h1>
+        <h1 className="text-xl font-semibold text-neutral-100">
+          {engine.owner_login && (
+            <>
+              <Link
+                to={profileUrl(engine.owner_login)}
+                className="text-neutral-400 hover:text-neutral-100 transition-colors"
+              >
+                {engine.owner_login}
+              </Link>
+              <span className="text-neutral-600"> / </span>
+            </>
+          )}
+          {engine.name}
+        </h1>
         {engine.description && (
           <p className="text-neutral-400 text-sm">{engine.description}</p>
         )}
       </div>
-
-      <p className="text-xs text-amber-500/80">
-        Uploaded engines aren't playable yet — running them in games is coming
-        soon.
-      </p>
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm uppercase tracking-wide text-neutral-500">
@@ -82,6 +101,37 @@ export default function EngineDetail() {
                   {new Date(v.created_at).toLocaleDateString()}
                 </span>
               </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm uppercase tracking-wide text-neutral-500">
+          recent games
+        </h2>
+        {engine.games.length === 0 ? (
+          <p className="text-neutral-500 text-sm italic">no games yet</p>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {engine.games.map((g) => (
+              <Link
+                key={g.id}
+                to={`/game/${g.id}`}
+                className="block border border-neutral-800 hover:border-neutral-600 rounded px-3 py-2 transition-colors"
+              >
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium">{g.white_name}</span>
+                  <span className="text-neutral-500">vs</span>
+                  <span className="font-medium">{g.black_name}</span>
+                  <span className="ml-auto font-mono text-xs text-neutral-400">
+                    {g.result ?? '*'}
+                  </span>
+                </div>
+                <div className="text-xs text-neutral-500 mt-0.5">
+                  {new Date(g.created_at).toLocaleString()}
+                </div>
+              </Link>
             ))}
           </div>
         )}

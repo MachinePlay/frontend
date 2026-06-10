@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import {
   createCliToken,
+  engineUrl,
   fetchTokens,
   fetchUserProfile,
   revokeToken,
@@ -9,6 +10,7 @@ import {
   type UserProfile as Profile,
 } from '../api'
 import { useAuth } from '../auth-context'
+import NotFound from './NotFound'
 
 function engineLabel(login: string, name: string): string {
   return `${login}/${name}`
@@ -132,7 +134,7 @@ export default function UserProfile() {
   }, [login])
 
   if (error) {
-    return <p className="max-w-3xl mx-auto px-4 py-8 text-red-400">{error}</p>
+    return <NotFound />
   }
   if (profile === null) {
     return (
@@ -177,7 +179,7 @@ export default function UserProfile() {
             {profile.engines.map((e) => (
               <Link
                 key={e.id}
-                to={`/engine/${e.id}`}
+                to={engineUrl(e)}
                 className="block border border-neutral-800 hover:border-neutral-600 rounded px-3 py-2 transition-colors"
               >
                 <div className="flex items-center gap-2 text-sm">

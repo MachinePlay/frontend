@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router'
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router'
 import Layout from './Layout'
 import { AuthProvider } from './auth'
 import Home from './pages/Home'
@@ -11,6 +11,12 @@ import Register from './pages/Register'
 import UserProfile from './pages/UserProfile'
 import NotFound from './pages/NotFound'
 import { ParamStub, Stub } from './pages/Stub'
+
+// Profiles moved from /u/{login} to /{login}; keep old links working.
+function LegacyProfileRedirect() {
+  const { login = '' } = useParams()
+  return <Navigate to={`/${login}`} replace />
+}
 
 export default function App() {
   return (
@@ -34,7 +40,7 @@ export default function App() {
               path="tournament/:id"
               element={<ParamStub title="tournament" paramName="id" />}
             />
-            <Route path="u/:login" element={<UserProfile />} />
+            <Route path="u/:login" element={<LegacyProfileRedirect />} />
             <Route
               path="about"
               element={
@@ -44,6 +50,10 @@ export default function App() {
                 />
               }
             />
+            {/* GitHub-style: /{login} profile, /{login}/{engine} detail.
+                Static routes above always win over these dynamic segments. */}
+            <Route path=":login" element={<UserProfile />} />
+            <Route path=":login/:engineName" element={<EngineDetail />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { fetchEngines, type Engine } from '../api'
+import { engineUrl, fetchEngines, type Engine } from '../api'
 
 function engineLabel(e: Engine): string {
   return e.owner_login ? `${e.owner_login}/${e.name}` : e.name
@@ -46,7 +46,7 @@ export default function Engines() {
           {engines.map((e) => (
             <Link
               key={e.id}
-              to={`/engine/${e.id}`}
+              to={engineUrl(e)}
               className="block border border-neutral-800 hover:border-neutral-600 rounded px-3 py-2 transition-colors"
             >
               <div className="flex items-center gap-2 text-sm">

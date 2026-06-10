@@ -43,7 +43,7 @@ export default function Register() {
     try {
       const user = await completeSignup(handle.trim())
       setUser(user)
-      navigate(`/u/${user.login}`)
+      navigate(`/${user.login}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'registration failed')
     } finally {
