@@ -621,6 +621,213 @@ export type ValidationError = {
     };
 };
 
+export type GithubLoginData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/auth/github/login';
+};
+
+export type GithubLoginResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type GithubCallbackData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Code
+         */
+        code: string;
+        /**
+         * State
+         */
+        state: string;
+    };
+    url: '/auth/github/callback';
+};
+
+export type GithubCallbackErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GithubCallbackError = GithubCallbackErrors[keyof GithubCallbackErrors];
+
+export type GithubCallbackResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type PendingSignupData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/auth/pending';
+};
+
+export type PendingSignupResponses = {
+    /**
+     * Successful Response
+     */
+    200: PendingSignupOut;
+};
+
+export type PendingSignupResponse = PendingSignupResponses[keyof PendingSignupResponses];
+
+export type RegisterData = {
+    body: RegisterRequest;
+    path?: never;
+    query?: never;
+    url: '/auth/register';
+};
+
+export type RegisterErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RegisterError = RegisterErrors[keyof RegisterErrors];
+
+export type RegisterResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserOut;
+};
+
+export type RegisterResponse = RegisterResponses[keyof RegisterResponses];
+
+export type LogoutData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/auth/logout';
+};
+
+export type LogoutResponses = {
+    /**
+     * Response Logout
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: boolean;
+    };
+};
+
+export type LogoutResponse = LogoutResponses[keyof LogoutResponses];
+
+export type MeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/me';
+};
+
+export type MeResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserOut;
+};
+
+export type MeResponse = MeResponses[keyof MeResponses];
+
+export type ListTokensData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/me/tokens';
+};
+
+export type ListTokensResponses = {
+    /**
+     * Response List Tokens
+     *
+     * Successful Response
+     */
+    200: Array<ApiTokenOut>;
+};
+
+export type ListTokensResponse = ListTokensResponses[keyof ListTokensResponses];
+
+export type CreateTokenData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/me/tokens';
+};
+
+export type CreateTokenResponses = {
+    /**
+     * Successful Response
+     */
+    200: TokenOut;
+};
+
+export type CreateTokenResponse = CreateTokenResponses[keyof CreateTokenResponses];
+
+export type RevokeTokenData = {
+    body?: never;
+    path: {
+        /**
+         * Token Id
+         */
+        token_id: string;
+    };
+    query?: never;
+    url: '/me/tokens/{token_id}';
+};
+
+export type RevokeTokenErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RevokeTokenError = RevokeTokenErrors[keyof RevokeTokenErrors];
+
+export type RevokeTokenResponses = {
+    /**
+     * Response Revoke Token
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: boolean;
+    };
+};
+
+export type RevokeTokenResponse = RevokeTokenResponses[keyof RevokeTokenResponses];
+
+export type RegistryTokenData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/registry/token';
+};
+
+export type RegistryTokenResponses = {
+    /**
+     * Successful Response
+     */
+    200: RegistryTokenOut;
+};
+
+export type RegistryTokenResponse = RegistryTokenResponses[keyof RegistryTokenResponses];
+
 export type ListEnginesData = {
     body?: never;
     path?: never;
@@ -888,210 +1095,3 @@ export type SseLiveStreamResponses = {
 };
 
 export type SseLiveStreamResponse = SseLiveStreamResponses[keyof SseLiveStreamResponses];
-
-export type GithubLoginData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/auth/github/login';
-};
-
-export type GithubLoginResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type GithubCallbackData = {
-    body?: never;
-    path?: never;
-    query: {
-        /**
-         * Code
-         */
-        code: string;
-        /**
-         * State
-         */
-        state: string;
-    };
-    url: '/auth/github/callback';
-};
-
-export type GithubCallbackErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GithubCallbackError = GithubCallbackErrors[keyof GithubCallbackErrors];
-
-export type GithubCallbackResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type PendingSignupData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/auth/pending';
-};
-
-export type PendingSignupResponses = {
-    /**
-     * Successful Response
-     */
-    200: PendingSignupOut;
-};
-
-export type PendingSignupResponse = PendingSignupResponses[keyof PendingSignupResponses];
-
-export type RegisterData = {
-    body: RegisterRequest;
-    path?: never;
-    query?: never;
-    url: '/auth/register';
-};
-
-export type RegisterErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type RegisterError = RegisterErrors[keyof RegisterErrors];
-
-export type RegisterResponses = {
-    /**
-     * Successful Response
-     */
-    200: UserOut;
-};
-
-export type RegisterResponse = RegisterResponses[keyof RegisterResponses];
-
-export type MeData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/me';
-};
-
-export type MeResponses = {
-    /**
-     * Successful Response
-     */
-    200: UserOut;
-};
-
-export type MeResponse = MeResponses[keyof MeResponses];
-
-export type ListTokensData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/me/tokens';
-};
-
-export type ListTokensResponses = {
-    /**
-     * Response List Tokens
-     *
-     * Successful Response
-     */
-    200: Array<ApiTokenOut>;
-};
-
-export type ListTokensResponse = ListTokensResponses[keyof ListTokensResponses];
-
-export type CreateTokenData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/me/tokens';
-};
-
-export type CreateTokenResponses = {
-    /**
-     * Successful Response
-     */
-    200: TokenOut;
-};
-
-export type CreateTokenResponse = CreateTokenResponses[keyof CreateTokenResponses];
-
-export type RevokeTokenData = {
-    body?: never;
-    path: {
-        /**
-         * Token Id
-         */
-        token_id: string;
-    };
-    query?: never;
-    url: '/me/tokens/{token_id}';
-};
-
-export type RevokeTokenErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type RevokeTokenError = RevokeTokenErrors[keyof RevokeTokenErrors];
-
-export type RevokeTokenResponses = {
-    /**
-     * Response Revoke Token
-     *
-     * Successful Response
-     */
-    200: {
-        [key: string]: boolean;
-    };
-};
-
-export type RevokeTokenResponse = RevokeTokenResponses[keyof RevokeTokenResponses];
-
-export type LogoutData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/auth/logout';
-};
-
-export type LogoutResponses = {
-    /**
-     * Response Logout
-     *
-     * Successful Response
-     */
-    200: {
-        [key: string]: boolean;
-    };
-};
-
-export type LogoutResponse = LogoutResponses[keyof LogoutResponses];
-
-export type RegistryTokenData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/registry/token';
-};
-
-export type RegistryTokenResponses = {
-    /**
-     * Successful Response
-     */
-    200: RegistryTokenOut;
-};
-
-export type RegistryTokenResponse = RegistryTokenResponses[keyof RegistryTokenResponses];
