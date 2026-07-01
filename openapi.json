@@ -836,6 +836,45 @@
           }
         }
       }
+    },
+    "/stream/runners": {
+      "get": {
+        "tags": [
+          "Live streaming"
+        ],
+        "summary": "Sse Runner Stream",
+        "operationId": "sse_runner_stream",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunnerLiveEvent"
+                },
+                "itemSchema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1391,6 +1430,35 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HardwareInfo": {
+        "properties": {
+          "cpu_model": {
+            "type": "string",
+            "title": "Cpu Model"
+          },
+          "cpu_physical_cores": {
+            "type": "integer",
+            "title": "Cpu Physical Cores"
+          },
+          "cpu_logical_cores": {
+            "type": "integer",
+            "title": "Cpu Logical Cores"
+          },
+          "ram_total_bytes": {
+            "type": "integer",
+            "title": "Ram Total Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cpu_model",
+          "cpu_physical_cores",
+          "cpu_logical_cores",
+          "ram_total_bytes"
+        ],
+        "title": "HardwareInfo",
+        "description": "Static hardware description a runner reports once, in its Introduction.\n\nPersisted on the backend's Runner doc so it shows even while offline. GPU\nfields can be added here later as a purely additive change."
+      },
       "LiveStreamEvent": {
         "properties": {
           "game_id": {
@@ -1559,6 +1627,41 @@
         "title": "RegistryTokenOut",
         "description": "Docker Registry v2 token response (`GET /registry/token`)."
       },
+      "RunnerLiveEvent": {
+        "properties": {
+          "runner_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Runner Id"
+          },
+          "online": {
+            "type": "boolean",
+            "title": "Online"
+          },
+          "active_games": {
+            "type": "integer",
+            "title": "Active Games"
+          },
+          "telemetry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Telemetry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "runner_id",
+          "online",
+          "active_games"
+        ],
+        "title": "RunnerLiveEvent",
+        "description": "One runner's live status, pushed over the /stream/runners SSE feed on\nconnect, on each telemetry sample, and on disconnect."
+      },
       "RunnerOut": {
         "properties": {
           "runner_id": {
@@ -1602,6 +1705,26 @@
               }
             ],
             "title": "Last Seen At"
+          },
+          "hardware": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HardwareInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "telemetry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Telemetry"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -1723,6 +1846,36 @@
           "black"
         ],
         "title": "StartGameResponse"
+      },
+      "Telemetry": {
+        "properties": {
+          "cmd": {
+            "type": "string",
+            "const": "telemetry",
+            "title": "Cmd",
+            "default": "telemetry"
+          },
+          "cpu_percent": {
+            "type": "number",
+            "title": "Cpu Percent"
+          },
+          "ram_used_bytes": {
+            "type": "integer",
+            "title": "Ram Used Bytes"
+          },
+          "ram_percent": {
+            "type": "number",
+            "title": "Ram Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cpu_percent",
+          "ram_used_bytes",
+          "ram_percent"
+        ],
+        "title": "Telemetry",
+        "description": "Live resource utilization a runner reports periodically while connected.\n\nKept in memory on the backend (meaningful only while online) and fanned out\nover the runner SSE stream; not persisted."
       },
       "TokenOut": {
         "properties": {

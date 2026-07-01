@@ -338,6 +338,33 @@ export type HttpValidationError = {
 };
 
 /**
+ * HardwareInfo
+ *
+ * Static hardware description a runner reports once, in its Introduction.
+ *
+ * Persisted on the backend's Runner doc so it shows even while offline. GPU
+ * fields can be added here later as a purely additive change.
+ */
+export type HardwareInfo = {
+    /**
+     * Cpu Model
+     */
+    cpu_model: string;
+    /**
+     * Cpu Physical Cores
+     */
+    cpu_physical_cores: number;
+    /**
+     * Cpu Logical Cores
+     */
+    cpu_logical_cores: number;
+    /**
+     * Ram Total Bytes
+     */
+    ram_total_bytes: number;
+};
+
+/**
  * LiveStreamEvent
  */
 export type LiveStreamEvent = {
@@ -456,6 +483,28 @@ export type RegistryTokenOut = {
 };
 
 /**
+ * RunnerLiveEvent
+ *
+ * One runner's live status, pushed over the /stream/runners SSE feed on
+ * connect, on each telemetry sample, and on disconnect.
+ */
+export type RunnerLiveEvent = {
+    /**
+     * Runner Id
+     */
+    runner_id: string;
+    /**
+     * Online
+     */
+    online: boolean;
+    /**
+     * Active Games
+     */
+    active_games: number;
+    telemetry?: Telemetry | null;
+};
+
+/**
  * RunnerOut
  */
 export type RunnerOut = {
@@ -491,6 +540,8 @@ export type RunnerOut = {
      * Last Seen At
      */
     last_seen_at?: string | null;
+    hardware?: HardwareInfo | null;
+    telemetry?: Telemetry | null;
 };
 
 /**
@@ -553,6 +604,33 @@ export type StartGameResponse = {
      * Black
      */
     black: string;
+};
+
+/**
+ * Telemetry
+ *
+ * Live resource utilization a runner reports periodically while connected.
+ *
+ * Kept in memory on the backend (meaningful only while online) and fanned out
+ * over the runner SSE stream; not persisted.
+ */
+export type Telemetry = {
+    /**
+     * Cmd
+     */
+    cmd?: 'telemetry';
+    /**
+     * Cpu Percent
+     */
+    cpu_percent: number;
+    /**
+     * Ram Used Bytes
+     */
+    ram_used_bytes: number;
+    /**
+     * Ram Percent
+     */
+    ram_percent: number;
 };
 
 /**
@@ -1193,3 +1271,19 @@ export type SseLiveStreamResponses = {
 };
 
 export type SseLiveStreamResponse = SseLiveStreamResponses[keyof SseLiveStreamResponses];
+
+export type SseRunnerStreamData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/stream/runners';
+};
+
+export type SseRunnerStreamResponses = {
+    /**
+     * Successful Response
+     */
+    200: RunnerLiveEvent;
+};
+
+export type SseRunnerStreamResponse = SseRunnerStreamResponses[keyof SseRunnerStreamResponses];

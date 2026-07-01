@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchRunners } from '../api'
 import { Hint, RunnerList } from '../components'
+import { useRunnerStream } from '../useRunnerStream'
 
 export default function Runners() {
   const { data: runners, error } = useQuery({
@@ -8,6 +9,7 @@ export default function Runners() {
     queryFn: fetchRunners,
     staleTime: 5_000,
   })
+  const live = useRunnerStream()
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-4">
@@ -17,7 +19,7 @@ export default function Runners() {
       ) : runners === undefined ? (
         <Hint>loading…</Hint>
       ) : (
-        <RunnerList runners={runners} />
+        <RunnerList runners={runners} live={live} />
       )}
     </div>
   )

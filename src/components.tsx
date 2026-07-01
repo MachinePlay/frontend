@@ -7,6 +7,7 @@ import {
   type Engine,
   type Game,
   type Runner,
+  type RunnerLive,
 } from './api'
 import { relativeTime } from './format'
 
@@ -120,21 +121,67 @@ export function StatusDot({ online }: { online: boolean }) {
   )
 }
 
-export function RunnerRow({ runner }: { runner: Runner }) {
+/** A labeled utilization bar (0–100%). `detail` overrides the "NN%" readout. */
+export function Meter({
+  label,
+  percent,
+  detail,
+}: {
+  label: string
+  percent: number
+  detail?: string
+}) {
+  const pct = Math.max(0, Math.min(100, percent))
+  return (
+    <div className="flex-1 flex flex-col gap-1 min-w-0">
+      <div className="flex justify-between text-xs">
+        <span className="text-neutral-500">{label}</span>
+        <span className="text-neutral-300 tabular-nums">
+          {detail ?? `${pct.toFixed(0)}%`}
+        </span>
+      </div>
+      <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
+        <div
+          className="h-full bg-green-500 transition-[width] duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// A runner joined with its latest live status (fresher than the polled row when
+// present). Live events win for online/telemetry/active_games.
+export function RunnerRow({
+  runner,
+  live,
+}: {
+  runner: Runner
+  live?: RunnerLive
+}) {
+  const online = live?.online ?? runner.online
+  const activeGames = live?.active_games ?? runner.active_games
+  const telemetry = live?.telemetry ?? runner.telemetry
   return (
     <Link to={runnerUrl(runner.runner_id)} className={cardClass}>
       <div className="flex items-center gap-2 text-sm">
-        <StatusDot online={runner.online} />
+        <StatusDot online={online} />
         <span className="font-medium text-neutral-100">{runner.name}</span>
         <span className="text-xs text-neutral-500">{runner.owner_login}</span>
         <span className="ml-auto text-xs text-neutral-500">
-          {runner.online
-            ? `${runner.active_games}/${runner.max_games} games`
+          {online
+            ? `${activeGames}/${runner.max_games} games`
             : runner.last_seen_at
               ? `seen ${relativeTime(runner.last_seen_at)}`
               : 'offline'}
         </span>
       </div>
+      {online && telemetry && (
+        <div className="flex gap-4 mt-2">
+          <Meter label="cpu" percent={telemetry.cpu_percent} />
+          <Meter label="ram" percent={telemetry.ram_percent} />
+        </div>
+      )}
       {runner.description && (
         <div className="text-xs text-neutral-500 mt-0.5">
           {runner.description}
@@ -144,12 +191,18 @@ export function RunnerRow({ runner }: { runner: Runner }) {
   )
 }
 
-export function RunnerList({ runners }: { runners: Runner[] }) {
+export function RunnerList({
+  runners,
+  live,
+}: {
+  runners: Runner[]
+  live?: Map<string, RunnerLive>
+}) {
   if (runners.length === 0) return <Hint>no runners registered</Hint>
   return (
     <div className="flex flex-col gap-2">
       {runners.map((r) => (
-        <RunnerRow key={r.runner_id} runner={r} />
+        <RunnerRow key={r.runner_id} runner={r} live={live?.get(r.runner_id)} />
       ))}
     </div>
   )

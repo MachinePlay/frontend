@@ -4,9 +4,12 @@ import type {
   EngineOut,
   EngineVersionOut,
   GameOut,
+  HardwareInfo,
   PendingSignupOut,
+  RunnerLiveEvent,
   RunnerOut,
   SseStreamResponse,
+  Telemetry,
   StartGameResponse,
   TokenOut,
   UserOut,
@@ -59,6 +62,7 @@ const nullOn401 = (e: unknown): null => {
 export const gameStreamUrl = (gameId: string): string =>
   `${API_URL}/stream/game/${gameId}`
 export const liveStreamUrl = (): string => `${API_URL}/stream/live`
+export const runnerStreamUrl = (): string => `${API_URL}/stream/runners`
 
 // Kicks off the GitHub OAuth flow; the backend redirects back when done.
 export const githubLoginUrl = (): string => `${API_URL}/auth/github/login`
@@ -159,6 +163,9 @@ export type Engine = EngineOut
 export type EngineDetail = EngineDetailOut
 export type EngineVersion = EngineVersionOut
 export type Runner = RunnerOut
+export type RunnerLive = RunnerLiveEvent
+export type Hardware = HardwareInfo
+export type RunnerTelemetry = Telemetry
 export type Game = GameOut
 export type User = UserOut
 export type StreamEvent = SseStreamResponse

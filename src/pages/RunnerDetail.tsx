@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { fetchRunner, profileUrl, updateRunner, type Runner } from '../api'
-import { Hint, PrimaryButton, Section, StatusDot } from '../components'
+import { Hint, Meter, PrimaryButton, Section, StatusDot } from '../components'
 import { useAuth } from '../auth-context'
-import { relativeTime } from '../format'
+import { useRunnerStream } from '../useRunnerStream'
+import { formatBytes, relativeTime } from '../format'
 import NotFound from './NotFound'
 
 const fieldClass =
@@ -76,6 +77,7 @@ export default function RunnerDetail() {
     queryFn: () => fetchRunner(id),
     staleTime: 5_000,
   })
+  const liveMap = useRunnerStream()
 
   if (error) {
     return <NotFound />
@@ -89,12 +91,18 @@ export default function RunnerDetail() {
   }
 
   const isOwner = user?.login === runner.owner_login
+  // Prefer live status when the SSE feed has it; fall back to the polled row.
+  const live = liveMap.get(runner.runner_id)
+  const online = live?.online ?? runner.online
+  const activeGames = live?.active_games ?? runner.active_games
+  const telemetry = live?.telemetry ?? runner.telemetry
+  const hw = runner.hardware
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-5">
       <div className="flex flex-col gap-1">
         <h1 className="flex items-center gap-2 text-xl font-semibold text-neutral-100">
-          <StatusDot online={runner.online} />
+          <StatusDot online={online} />
           {runner.name}
         </h1>
         <p className="text-sm text-neutral-400">
@@ -114,18 +122,58 @@ export default function RunnerDetail() {
       <Section title="status">
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
           <dt className="text-neutral-500">state</dt>
-          <dd className="text-neutral-200">
-            {runner.online ? 'online' : 'offline'}
-          </dd>
+          <dd className="text-neutral-200">{online ? 'online' : 'offline'}</dd>
           <dt className="text-neutral-500">capacity</dt>
           <dd className="text-neutral-200">
-            {runner.active_games}/{runner.max_games} games
+            {activeGames}/{runner.max_games} games
           </dd>
           <dt className="text-neutral-500">last seen</dt>
           <dd className="text-neutral-200">
             {runner.last_seen_at ? relativeTime(runner.last_seen_at) : '—'}
           </dd>
         </dl>
+      </Section>
+
+      <Section title="hardware">
+        {hw ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
+            <dt className="text-neutral-500">cpu</dt>
+            <dd className="text-neutral-200">{hw.cpu_model}</dd>
+            <dt className="text-neutral-500">cores</dt>
+            <dd className="text-neutral-200">
+              {hw.cpu_physical_cores} physical / {hw.cpu_logical_cores} logical
+            </dd>
+            <dt className="text-neutral-500">memory</dt>
+            <dd className="text-neutral-200">
+              {formatBytes(hw.ram_total_bytes)}
+            </dd>
+          </dl>
+        ) : (
+          <Hint>hardware not reported yet</Hint>
+        )}
+      </Section>
+
+      <Section title="utilization">
+        {online && telemetry ? (
+          <div className="flex flex-col gap-3 max-w-md">
+            <Meter label="cpu" percent={telemetry.cpu_percent} />
+            <Meter
+              label="ram"
+              percent={telemetry.ram_percent}
+              detail={
+                hw
+                  ? `${formatBytes(telemetry.ram_used_bytes)} / ${formatBytes(
+                      hw.ram_total_bytes,
+                    )} · ${telemetry.ram_percent.toFixed(0)}%`
+                  : `${formatBytes(telemetry.ram_used_bytes)} · ${telemetry.ram_percent.toFixed(0)}%`
+              }
+            />
+          </div>
+        ) : online ? (
+          <Hint>waiting for telemetry…</Hint>
+        ) : (
+          <Hint>offline</Hint>
+        )}
       </Section>
 
       {isOwner && <RunnerEditor key={runner.runner_id} runner={runner} />}
