@@ -1,12 +1,16 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "FastAPI",
+    "title": "MachinePlay API",
+    "description": "\nBackend for **[MachinePlay](https://machineplay.org)**.\n\nUsers upload UCI chess engines as Docker images; runners pull them from a\nprivate registry and play games via\n[fastchess](https://github.com/Disservin/fastchess), streamed live to the\nbrowser over Server-Sent Events.\n",
     "version": "0.1.0"
   },
   "paths": {
     "/auth/github/login": {
       "get": {
+        "tags": [
+          "Auth & account"
+        ],
         "summary": "Github Login",
         "operationId": "github_login",
         "responses": {
@@ -23,6 +27,9 @@
     },
     "/auth/github/callback": {
       "get": {
+        "tags": [
+          "Auth & account"
+        ],
         "summary": "Github Callback",
         "operationId": "github_callback",
         "parameters": [
@@ -69,6 +76,9 @@
     },
     "/auth/pending": {
       "get": {
+        "tags": [
+          "Auth & account"
+        ],
         "summary": "Pending Signup",
         "description": "The GitHub profile waiting on a handle, for the /register page.",
         "operationId": "pending_signup",
@@ -88,6 +98,9 @@
     },
     "/auth/register": {
       "post": {
+        "tags": [
+          "Auth & account"
+        ],
         "summary": "Register",
         "description": "Complete a pending GitHub signup with the chosen handle.",
         "operationId": "register",
@@ -127,6 +140,9 @@
     },
     "/auth/logout": {
       "post": {
+        "tags": [
+          "Auth & account"
+        ],
         "summary": "Logout",
         "operationId": "logout",
         "responses": {
@@ -149,6 +165,9 @@
     },
     "/me": {
       "get": {
+        "tags": [
+          "Auth & account"
+        ],
         "summary": "Me",
         "operationId": "me",
         "responses": {
@@ -167,6 +186,9 @@
     },
     "/me/tokens": {
       "get": {
+        "tags": [
+          "Auth & account"
+        ],
         "summary": "List Tokens",
         "description": "The logged-in user's API tokens (prefix + timestamps, never plaintext).",
         "operationId": "list_tokens",
@@ -188,6 +210,9 @@
         }
       },
       "post": {
+        "tags": [
+          "Auth & account"
+        ],
         "summary": "Create Token",
         "description": "Mint a CLI API token for the logged-in user (shown once).",
         "operationId": "create_token",
@@ -207,6 +232,9 @@
     },
     "/me/tokens/{token_id}": {
       "delete": {
+        "tags": [
+          "Auth & account"
+        ],
         "summary": "Revoke Token",
         "operationId": "revoke_token",
         "parameters": [
@@ -251,6 +279,9 @@
     },
     "/registry/token": {
       "get": {
+        "tags": [
+          "Auth & account"
+        ],
         "summary": "Registry Token",
         "description": "Docker Registry v2 token endpoint (the registry's `auth.token.realm`).\n\nAuthenticates the ``mp_`` token sent as the HTTP Basic password (written by\n``machineplay login``) and mints a signed JWT granting the requested scopes.",
         "operationId": "registry_token",
@@ -270,6 +301,9 @@
     },
     "/engine": {
       "get": {
+        "tags": [
+          "Engines & profiles"
+        ],
         "summary": "List Engines",
         "operationId": "list_engines",
         "responses": {
@@ -292,6 +326,9 @@
     },
     "/engine/register": {
       "post": {
+        "tags": [
+          "Engines & profiles"
+        ],
         "summary": "Register Engine",
         "description": "Record an engine version after the CLI pushed its image to the registry.",
         "operationId": "register_engine",
@@ -329,8 +366,11 @@
         }
       }
     },
-    "/u/{login}": {
+    "/user/{login}": {
       "get": {
+        "tags": [
+          "Engines & profiles"
+        ],
         "summary": "User Profile",
         "description": "Public profile: the user, their engines, and those engines' games.",
         "operationId": "user_profile",
@@ -369,8 +409,11 @@
         }
       }
     },
-    "/u/{login}/{engine_name}": {
+    "/user/{login}/{engine_name}": {
       "get": {
+        "tags": [
+          "Engines & profiles"
+        ],
         "summary": "Get Engine By Name",
         "description": "Engine detail addressed GitHub-style: owner handle + engine name.",
         "operationId": "get_engine_by_name",
@@ -420,6 +463,9 @@
     },
     "/runners": {
       "get": {
+        "tags": [
+          "Games & runners"
+        ],
         "summary": "List Runners",
         "operationId": "list_runners",
         "responses": {
@@ -442,6 +488,9 @@
     },
     "/game": {
       "post": {
+        "tags": [
+          "Games & runners"
+        ],
         "summary": "Start Game",
         "operationId": "start_game",
         "requestBody": {
@@ -478,6 +527,9 @@
         }
       },
       "get": {
+        "tags": [
+          "Games & runners"
+        ],
         "summary": "List Games",
         "operationId": "list_games",
         "parameters": [
@@ -524,6 +576,9 @@
     },
     "/game/{game_id}": {
       "get": {
+        "tags": [
+          "Games & runners"
+        ],
         "summary": "Get Game",
         "operationId": "get_game",
         "parameters": [
@@ -564,6 +619,9 @@
     },
     "/stream/game/{game_id}": {
       "get": {
+        "tags": [
+          "Live streaming"
+        ],
         "summary": "Sse Stream",
         "operationId": "sse_stream",
         "parameters": [
@@ -645,6 +703,9 @@
     },
     "/stream/live": {
       "get": {
+        "tags": [
+          "Live streaming"
+        ],
         "summary": "Sse Live Stream",
         "operationId": "sse_live_stream",
         "responses": {
@@ -1660,5 +1721,23 @@
         "title": "ValidationError"
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Auth & account",
+      "description": "GitHub OAuth login, the logged-in account, session and CLI tokens, and the Docker registry token endpoint."
+    },
+    {
+      "name": "Engines & profiles",
+      "description": "Public user profiles and the engines they've uploaded."
+    },
+    {
+      "name": "Games & runners",
+      "description": "Start games, browse results, and see the connected runners that play them."
+    },
+    {
+      "name": "Live streaming",
+      "description": "Server-Sent Events for live game updates and the runner WebSocket."
+    }
+  ]
 }

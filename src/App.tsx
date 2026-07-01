@@ -38,7 +38,7 @@ export default function App() {
               element={
                 <Stub
                   title="about"
-                  note="MachinePlay — engines play, you watch. More soon."
+                  note="MachinePlay — more soon."
                 />
               }
             />

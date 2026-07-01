@@ -880,7 +880,7 @@ export type UserProfileData = {
         login: string;
     };
     query?: never;
-    url: '/u/{login}';
+    url: '/user/{login}';
 };
 
 export type UserProfileErrors = {
@@ -914,7 +914,7 @@ export type GetEngineByNameData = {
         engine_name: string;
     };
     query?: never;
-    url: '/u/{login}/{engine_name}';
+    url: '/user/{login}/{engine_name}';
 };
 
 export type GetEngineByNameErrors = {

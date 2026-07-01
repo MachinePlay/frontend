@@ -76,10 +76,10 @@ export const fetchEngineByName = (
   login: string,
   name: string,
 ): Promise<EngineDetail> =>
-  request(`/u/${encodeURIComponent(login)}/${encodeURIComponent(name)}`)
+  request(`/user/${encodeURIComponent(login)}/${encodeURIComponent(name)}`)
 
 export const fetchUserProfile = (login: string): Promise<UserProfile> =>
-  request(`/u/${encodeURIComponent(login)}`)
+  request(`/user/${encodeURIComponent(login)}`)
 
 export const fetchGames = (): Promise<Game[]> => request('/game')
 
