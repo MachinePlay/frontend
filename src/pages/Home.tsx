@@ -145,7 +145,12 @@ export default function Home() {
 
   const whiteId = whiteSel || engines[0]?.id || ''
   const blackId = blackSel || engines[Math.min(1, engines.length - 1)]?.id || ''
-  const runnerId = runnerSel || runners[0]?.runner_id || ''
+  // Only online runners can play, so default to the first online one (falling
+  // back to any runner so the select still shows a sensible value).
+  const onlineRunners = runners.filter((r) => r.online)
+  const runnerId =
+    runnerSel || onlineRunners[0]?.runner_id || runners[0]?.runner_id || ''
+  const selectedRunner = runners.find((r) => r.runner_id === runnerId)
 
   const whiteVersions = useEngineVersions(engines.find((e) => e.id === whiteId))
   const blackVersions = useEngineVersions(engines.find((e) => e.id === blackId))
@@ -167,7 +172,7 @@ export default function Home() {
   }, [queryClient])
 
   const startGame = async () => {
-    if (!whiteId || !blackId || !runnerId) return
+    if (!whiteId || !blackId || !selectedRunner?.online) return
     setStarting(true)
     setStartError(null)
     try {
@@ -227,11 +232,16 @@ export default function Home() {
               disabled={runners.length === 0}
             >
               {runners.length === 0 ? (
-                <option value="">no runners connected</option>
+                <option value="">no runners registered</option>
               ) : (
                 runners.map((r) => (
-                  <option key={r.runner_id} value={r.runner_id}>
+                  <option
+                    key={r.runner_id}
+                    value={r.runner_id}
+                    disabled={!r.online}
+                  >
                     {r.name}
+                    {r.online ? '' : ' (offline)'}
                   </option>
                 ))
               )}
@@ -244,7 +254,7 @@ export default function Home() {
                   engines.length === 0 ||
                   !whiteId ||
                   !blackId ||
-                  !runnerId
+                  !selectedRunner?.online
                 }
                 className="shrink-0"
               >

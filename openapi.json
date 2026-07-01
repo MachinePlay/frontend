@@ -467,6 +467,7 @@
           "Games & runners"
         ],
         "summary": "List Runners",
+        "description": "All registered runners, durable metadata joined with live online status.",
         "operationId": "list_runners",
         "responses": {
           "200": {
@@ -479,6 +480,102 @@
                   },
                   "type": "array",
                   "title": "Response List Runners"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runner/{runner_id}": {
+      "get": {
+        "tags": [
+          "Games & runners"
+        ],
+        "summary": "Get Runner",
+        "description": "One runner's durable metadata joined with its live online status.",
+        "operationId": "get_runner",
+        "parameters": [
+          {
+            "name": "runner_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Runner Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunnerOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Games & runners"
+        ],
+        "summary": "Update Runner",
+        "description": "Edit a runner's name/description (owner only).",
+        "operationId": "update_runner",
+        "parameters": [
+          {
+            "name": "runner_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Runner Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunnerUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunnerOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1472,14 +1569,79 @@
           "name": {
             "type": "string",
             "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "owner_login": {
+            "type": "string",
+            "title": "Owner Login"
+          },
+          "online": {
+            "type": "boolean",
+            "title": "Online"
+          },
+          "max_games": {
+            "type": "integer",
+            "title": "Max Games"
+          },
+          "active_games": {
+            "type": "integer",
+            "title": "Active Games",
+            "default": 0
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
           }
         },
         "type": "object",
         "required": [
           "runner_id",
-          "name"
+          "name",
+          "description",
+          "owner_login",
+          "online",
+          "max_games"
         ],
         "title": "RunnerOut"
+      },
+      "RunnerUpdateRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "title": "RunnerUpdateRequest"
       },
       "StartGameRequest": {
         "properties": {

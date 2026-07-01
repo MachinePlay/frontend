@@ -5,6 +5,8 @@ import Home from './pages/Home'
 import GamePage from './pages/GamePage'
 import Engines from './pages/Engines'
 import EngineDetail from './pages/EngineDetail'
+import Runners from './pages/Runners'
+import RunnerDetail from './pages/RunnerDetail'
 import UploadInfo from './pages/UploadInfo'
 import CliToken from './pages/CliToken'
 import Register from './pages/Register'
@@ -22,6 +24,8 @@ export default function App() {
             <Route path="game/:id" element={<GamePage />} />
             <Route path="engine" element={<Engines />} />
             <Route path="engine/upload" element={<UploadInfo />} />
+            <Route path="runners" element={<Runners />} />
+            <Route path="runners/:id" element={<RunnerDetail />} />
             <Route path="cli" element={<CliToken />} />
             <Route path="register" element={<Register />} />
             <Route path="tournament" element={<Stub title="tournaments" />} />

@@ -1,6 +1,13 @@
 import { useState, type ComponentProps, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { engineUrl, gameUrl, type Engine, type Game } from './api'
+import {
+  engineUrl,
+  gameUrl,
+  runnerUrl,
+  type Engine,
+  type Game,
+  type Runner,
+} from './api'
 import { relativeTime } from './format'
 
 export function Section({
@@ -96,6 +103,53 @@ export function EngineList({ engines }: { engines: Engine[] }) {
     <div className="flex flex-col gap-2">
       {engines.map((e) => (
         <EngineRow key={e.id} engine={e} />
+      ))}
+    </div>
+  )
+}
+
+/** Small green/grey dot indicating a runner's online status. */
+export function StatusDot({ online }: { online: boolean }) {
+  return (
+    <span
+      className={`inline-block h-2 w-2 rounded-full ${
+        online ? 'bg-green-500' : 'bg-neutral-600'
+      }`}
+      aria-label={online ? 'online' : 'offline'}
+    />
+  )
+}
+
+export function RunnerRow({ runner }: { runner: Runner }) {
+  return (
+    <Link to={runnerUrl(runner.runner_id)} className={cardClass}>
+      <div className="flex items-center gap-2 text-sm">
+        <StatusDot online={runner.online} />
+        <span className="font-medium text-neutral-100">{runner.name}</span>
+        <span className="text-xs text-neutral-500">{runner.owner_login}</span>
+        <span className="ml-auto text-xs text-neutral-500">
+          {runner.online
+            ? `${runner.active_games}/${runner.max_games} games`
+            : runner.last_seen_at
+              ? `seen ${relativeTime(runner.last_seen_at)}`
+              : 'offline'}
+        </span>
+      </div>
+      {runner.description && (
+        <div className="text-xs text-neutral-500 mt-0.5">
+          {runner.description}
+        </div>
+      )}
+    </Link>
+  )
+}
+
+export function RunnerList({ runners }: { runners: Runner[] }) {
+  if (runners.length === 0) return <Hint>no runners registered</Hint>
+  return (
+    <div className="flex flex-col gap-2">
+      {runners.map((r) => (
+        <RunnerRow key={r.runner_id} runner={r} />
       ))}
     </div>
   )

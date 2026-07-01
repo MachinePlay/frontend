@@ -467,6 +467,44 @@ export type RunnerOut = {
      * Name
      */
     name: string;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Owner Login
+     */
+    owner_login: string;
+    /**
+     * Online
+     */
+    online: boolean;
+    /**
+     * Max Games
+     */
+    max_games: number;
+    /**
+     * Active Games
+     */
+    active_games?: number;
+    /**
+     * Last Seen At
+     */
+    last_seen_at?: string | null;
+};
+
+/**
+ * RunnerUpdateRequest
+ */
+export type RunnerUpdateRequest = {
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Description
+     */
+    description?: string | null;
 };
 
 /**
@@ -952,6 +990,66 @@ export type ListRunnersResponses = {
 };
 
 export type ListRunnersResponse = ListRunnersResponses[keyof ListRunnersResponses];
+
+export type GetRunnerData = {
+    body?: never;
+    path: {
+        /**
+         * Runner Id
+         */
+        runner_id: string;
+    };
+    query?: never;
+    url: '/runner/{runner_id}';
+};
+
+export type GetRunnerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetRunnerError = GetRunnerErrors[keyof GetRunnerErrors];
+
+export type GetRunnerResponses = {
+    /**
+     * Successful Response
+     */
+    200: RunnerOut;
+};
+
+export type GetRunnerResponse = GetRunnerResponses[keyof GetRunnerResponses];
+
+export type UpdateRunnerData = {
+    body: RunnerUpdateRequest;
+    path: {
+        /**
+         * Runner Id
+         */
+        runner_id: string;
+    };
+    query?: never;
+    url: '/runner/{runner_id}';
+};
+
+export type UpdateRunnerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateRunnerError = UpdateRunnerErrors[keyof UpdateRunnerErrors];
+
+export type UpdateRunnerResponses = {
+    /**
+     * Successful Response
+     */
+    200: RunnerOut;
+};
+
+export type UpdateRunnerResponse = UpdateRunnerResponses[keyof UpdateRunnerResponses];
 
 export type ListGamesData = {
     body?: never;

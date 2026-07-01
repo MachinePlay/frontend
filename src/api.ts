@@ -87,6 +87,22 @@ export const fetchGame = (id: string): Promise<Game> => request(`/game/${id}`)
 
 export const fetchRunners = (): Promise<Runner[]> => request('/runners')
 
+export const fetchRunner = (id: string): Promise<Runner> =>
+  request(`/runner/${id}`)
+
+// Edit a runner's owner-managed metadata (owner only). Omitted fields are left
+// unchanged.
+export const updateRunner = (
+  id: string,
+  patch: { name?: string; description?: string },
+): Promise<Runner> =>
+  request(`/runner/${id}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  })
+
 // Schedule a game; returns the new game id. Version ids are optional —
 // the backend defaults each side to the engine's latest upload.
 export const startGame = async (req: {
@@ -134,6 +150,7 @@ export const profileUrl = (login: string): string => `/${login}`
 export const engineUrl = (e: { name: string; owner_login: string }): string =>
   `/${e.owner_login}/${e.name}`
 export const gameUrl = (id: string): string => `/game/${id}`
+export const runnerUrl = (id: string): string => `/runners/${id}`
 
 export const START_FEN =
   'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'

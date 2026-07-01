@@ -64,6 +64,9 @@ export default function Layout() {
           <NavLink to="/engine" className={navLinkClass}>
             engines
           </NavLink>
+          <NavLink to="/runners" className={navLinkClass}>
+            runners
+          </NavLink>
           <NavLink to="/tournament" className={navLinkClass}>
             tournaments
           </NavLink>
