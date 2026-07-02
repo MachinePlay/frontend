@@ -2241,13 +2241,12 @@
           "format": {
             "$ref": "#/components/schemas/TournamentFormat"
           },
-          "engine_ids": {
+          "entries": {
             "items": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/TournamentEntry"
             },
             "type": "array",
-            "title": "Engine Ids"
+            "title": "Entries"
           },
           "gauntlet_head_id": {
             "anyOf": [
@@ -2287,7 +2286,7 @@
         "required": [
           "name",
           "format",
-          "engine_ids",
+          "entries",
           "runner_id"
         ],
         "title": "TournamentCreateRequest"
@@ -2394,6 +2393,32 @@
           "created_at"
         ],
         "title": "TournamentDetailOut"
+      },
+      "TournamentEntry": {
+        "properties": {
+          "engine_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Engine Id"
+          },
+          "version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "engine_id"
+        ],
+        "title": "TournamentEntry"
       },
       "TournamentFormat": {
         "type": "string",

@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Chessground } from '../Chessground'
 import { useAuth } from '../auth-context'
 import {
-  fetchEngineByName,
   fetchEngines,
   fetchGames,
   fetchRunners,
@@ -20,59 +18,18 @@ import {
 import {
   GameList,
   Hint,
+  LiveGameGrid,
   PrimaryButton,
   Section,
   TournamentList,
 } from '../components'
 import { applyLiveEvent } from '../live'
+import { useEngineVersions } from '../useEngineVersions'
 import { DEFAULT_TC, TC_PRESETS } from '../tc'
 
 const LIVE_DISPLAY_LIMIT = 8
 
-function LiveGameCard({ game }: { game: Game }) {
-  const moveNo = Math.max(1, Math.ceil(game.moves.length / 2))
-  return (
-    <Link
-      to={gameUrl(game.id)}
-      className="group flex flex-col gap-2 rounded-lg border border-neutral-800 hover:border-neutral-600 bg-neutral-900/60 p-3 transition-colors"
-    >
-      <Chessground
-        className="!w-full"
-        config={{
-          fen: game.fen,
-          viewOnly: true,
-          coordinates: false,
-          drawable: { enabled: false },
-        }}
-      />
-      <div className="flex items-center gap-2 text-sm">
-        <span className="font-medium truncate">{game.white_name}</span>
-        <span className="text-neutral-500">vs</span>
-        <span className="font-medium truncate">{game.black_name}</span>
-      </div>
-      <div className="flex items-center gap-2 text-xs text-neutral-500">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-          live
-        </span>
-        <span className="ml-auto">move {moveNo}</span>
-      </div>
-    </Link>
-  )
-}
-
 const selectClass = 'bg-neutral-900 border border-neutral-800 rounded px-2 py-1'
-
-// Versions of the selected engine, shared with the engine page's cache entry.
-function useEngineVersions(engine: Engine | undefined): EngineVersion[] {
-  const { data } = useQuery({
-    queryKey: ['engine', engine?.owner_login ?? '', engine?.name ?? ''],
-    queryFn: () => fetchEngineByName(engine!.owner_login, engine!.name),
-    enabled: engine !== undefined,
-    select: (d) => d.versions,
-  })
-  return data ?? []
-}
 
 function SideRow({
   label,
@@ -317,11 +274,7 @@ export default function Home() {
         ) : live.length === 0 ? (
           <Hint>no live games</Hint>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-            {live.map((g) => (
-              <LiveGameCard key={g.id} game={g} />
-            ))}
-          </div>
+          <LiveGameGrid games={live} />
         )}
       </Section>
 

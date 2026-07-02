@@ -4,12 +4,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelTournament,
   fetchTournament,
+  liveStreamUrl,
   profileUrl,
   runnerUrl,
+  type LiveStreamEvent,
   type Standing,
+  type TournamentDetail as TournamentDetailData,
 } from '../api'
-import { GameList, Hint, Section, TournamentStatusPill } from '../components'
+import {
+  GameList,
+  Hint,
+  LiveGameGrid,
+  Section,
+  TournamentStatusPill,
+} from '../components'
 import { useAuth } from '../auth-context'
+import { applyLiveEvent } from '../live'
 import { formatLabel, relativeTime } from '../format'
 import NotFound from './NotFound'
 
@@ -119,13 +129,34 @@ function CancelControl({ id }: { id: string }) {
 export default function TournamentDetail() {
   const { id = '' } = useParams()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const { data: t, error } = useQuery({
     queryKey: ['tournament', id],
     queryFn: () => fetchTournament(id),
-    // Poll while running so standings + game statuses stay live.
+    // Poll while running so standings + newly-dispatched pairings show up.
     refetchInterval: (query) =>
       query.state.data?.status === 'running' ? 3_000 : false,
   })
+
+  // Animate the live boards move-by-move (like the home dashboard). Only merge
+  // events for games already in this tournament — foreign games are ignored;
+  // the poll above adds new pairings, then their board starts updating here.
+  useEffect(() => {
+    const es = new EventSource(liveStreamUrl())
+    es.onmessage = (e) => {
+      const event: LiveStreamEvent = JSON.parse(e.data)
+      queryClient.setQueryData<TournamentDetailData>(
+        ['tournament', id],
+        (prev) => {
+          if (!prev || !prev.games.some((g) => g.id === event.game_id)) {
+            return prev
+          }
+          return { ...prev, games: applyLiveEvent(prev.games, event) }
+        },
+      )
+    }
+    return () => es.close()
+  }, [queryClient, id])
 
   if (error) return <NotFound />
   if (!t) {
@@ -189,7 +220,7 @@ export default function TournamentDetail() {
             </>
           }
         >
-          <GameList games={live} />
+          <LiveGameGrid games={live} />
         </Section>
       )}
 

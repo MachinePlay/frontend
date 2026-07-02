@@ -7,9 +7,11 @@ import {
   fetchEngines,
   fetchRunners,
   tournamentUrl,
+  type Engine,
   type TournamentFormat,
 } from '../api'
 import { Hint, PrimaryButton, Section } from '../components'
+import { useEngineVersions } from '../useEngineVersions'
 import { DEFAULT_TC, TC_PRESETS } from '../tc'
 
 const selectClass = 'bg-neutral-900 border border-neutral-800 rounded px-2 py-1'
@@ -20,6 +22,80 @@ const fieldClass =
 function pairingCount(format: TournamentFormat, n: number): number {
   if (n < 2) return 0
   return format === 'gauntlet' ? n - 1 : (n * (n - 1)) / 2
+}
+
+// One selectable engine: checkbox + name, plus a version picker and a
+// gauntlet-head control once it's selected. `versionId` is '' for "latest".
+function EngineEntryRow({
+  engine,
+  checked,
+  gauntlet,
+  isHead,
+  versionId,
+  onToggle,
+  onVersion,
+  onMakeHead,
+}: {
+  engine: Engine
+  checked: boolean
+  gauntlet: boolean
+  isHead: boolean
+  versionId: string
+  onToggle: () => void
+  onVersion: (versionId: string) => void
+  onMakeHead: () => void
+}) {
+  // Only fetch versions once the engine is actually selected.
+  const versions = useEngineVersions(checked ? engine : undefined)
+  return (
+    <div
+      className={`flex items-center gap-2 rounded border px-3 py-2 transition-colors ${
+        checked
+          ? 'border-neutral-600 bg-neutral-900'
+          : 'border-neutral-800 hover:border-neutral-700'
+      }`}
+    >
+      <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+        <input
+          type="checkbox"
+          className="accent-neutral-300"
+          checked={checked}
+          onChange={onToggle}
+        />
+        <span className="text-sm text-neutral-100 truncate">
+          {engine.owner_login}/{engine.name}
+        </span>
+      </label>
+      {checked && (
+        <select
+          className={`${selectClass} text-xs w-28 shrink-0`}
+          value={versionId}
+          onChange={(e) => onVersion(e.target.value)}
+          title="version to enter"
+        >
+          <option value="">latest</option>
+          {versions.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.version}
+            </option>
+          ))}
+        </select>
+      )}
+      {gauntlet &&
+        checked &&
+        (isHead ? (
+          <span className="text-xs text-green-400 shrink-0">head</span>
+        ) : (
+          <button
+            type="button"
+            onClick={onMakeHead}
+            className="text-xs text-neutral-500 hover:text-neutral-200 shrink-0"
+          >
+            make head
+          </button>
+        ))}
+    </div>
+  )
 }
 
 export default function TournamentNew() {
@@ -40,6 +116,8 @@ export default function TournamentNew() {
   const [name, setName] = useState('')
   const [format, setFormat] = useState<TournamentFormat>('round_robin')
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // engine id -> chosen version id ('' / absent means the engine's latest).
+  const [versionSel, setVersionSel] = useState<Map<string, string>>(new Map())
   const [headId, setHeadId] = useState('')
   const [gamesPerPairing, setGamesPerPairing] = useState(2)
   const [runnerSel, setRunnerSel] = useState('')
@@ -75,6 +153,14 @@ export default function TournamentNew() {
     })
   }
 
+  const setVersion = (engineId: string, versionId: string) => {
+    setVersionSel((prev) => {
+      const next = new Map(prev)
+      next.set(engineId, versionId)
+      return next
+    })
+  }
+
   const valid =
     name.trim() !== '' &&
     selected.size >= 2 &&
@@ -90,7 +176,10 @@ export default function TournamentNew() {
       const detail = await createTournament({
         name: name.trim(),
         format,
-        engine_ids: [...selected],
+        entries: [...selected].map((engine_id) => ({
+          engine_id,
+          version_id: versionSel.get(engine_id) || null,
+        })),
         gauntlet_head_id: format === 'gauntlet' ? effectiveHead : null,
         games_per_pairing: gamesPerPairing,
         runner_id: runnerId,
@@ -207,47 +296,19 @@ export default function TournamentNew() {
           <Hint>no engines to enter — upload one first</Hint>
         ) : (
           <div className="flex flex-col gap-1 max-h-72 overflow-y-auto pr-1">
-            {engines.map((e) => {
-              const checked = selected.has(e.id)
-              return (
-                <label
-                  key={e.id}
-                  className={`flex items-center gap-2 rounded border px-3 py-2 cursor-pointer transition-colors ${
-                    checked
-                      ? 'border-neutral-600 bg-neutral-900'
-                      : 'border-neutral-800 hover:border-neutral-700'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    className="accent-neutral-300"
-                    checked={checked}
-                    onChange={() => toggle(e.id)}
-                  />
-                  <span className="text-sm text-neutral-100">
-                    {e.owner_login}/{e.name}
-                  </span>
-                  {format === 'gauntlet' && checked && (
-                    <span className="ml-auto text-xs">
-                      {effectiveHead === e.id ? (
-                        <span className="text-green-400">head</span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={(ev) => {
-                            ev.preventDefault()
-                            setHeadId(e.id)
-                          }}
-                          className="text-neutral-500 hover:text-neutral-200"
-                        >
-                          make head
-                        </button>
-                      )}
-                    </span>
-                  )}
-                </label>
-              )
-            })}
+            {engines.map((e) => (
+              <EngineEntryRow
+                key={e.id}
+                engine={e}
+                checked={selected.has(e.id)}
+                gauntlet={format === 'gauntlet'}
+                isHead={effectiveHead === e.id}
+                versionId={versionSel.get(e.id) ?? ''}
+                onToggle={() => toggle(e.id)}
+                onVersion={(v) => setVersion(e.id, v)}
+                onMakeHead={() => setHeadId(e.id)}
+              />
+            ))}
           </div>
         )}
       </Section>

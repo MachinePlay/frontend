@@ -710,9 +710,9 @@ export type TournamentCreateRequest = {
     name: string;
     format: TournamentFormat;
     /**
-     * Engine Ids
+     * Entries
      */
-    engine_ids: Array<string>;
+    entries: Array<TournamentEntry>;
     /**
      * Gauntlet Head Id
      */
@@ -785,6 +785,20 @@ export type TournamentDetailOut = {
      * Ended At
      */
     ended_at?: string | null;
+};
+
+/**
+ * TournamentEntry
+ */
+export type TournamentEntry = {
+    /**
+     * Engine Id
+     */
+    engine_id: string;
+    /**
+     * Version Id
+     */
+    version_id?: string | null;
 };
 
 /**

@@ -1,5 +1,6 @@
 import { useState, type ComponentProps, type ReactNode } from 'react'
 import { Link } from 'react-router'
+import { Chessground } from './Chessground'
 import {
   engineUrl,
   gameUrl,
@@ -88,6 +89,51 @@ export function GameList({ games }: { games: Game[] }) {
     <div className="flex flex-col gap-2">
       {games.map((g) => (
         <GameRow key={g.id} game={g} />
+      ))}
+    </div>
+  )
+}
+
+/** A live game as a board preview with names + move counter — the dashboard
+    card, reused on the tournament page. */
+export function LiveGameCard({ game }: { game: Game }) {
+  const moveNo = Math.max(1, Math.ceil(game.moves.length / 2))
+  return (
+    <Link
+      to={gameUrl(game.id)}
+      className="group flex flex-col gap-2 rounded-lg border border-neutral-800 hover:border-neutral-600 bg-neutral-900/60 p-3 transition-colors"
+    >
+      <Chessground
+        className="!w-full"
+        config={{
+          fen: game.fen,
+          viewOnly: true,
+          coordinates: false,
+          drawable: { enabled: false },
+        }}
+      />
+      <div className="flex items-center gap-2 text-sm">
+        <span className="font-medium truncate">{game.white_name}</span>
+        <span className="text-neutral-500">vs</span>
+        <span className="font-medium truncate">{game.black_name}</span>
+      </div>
+      <div className="flex items-center gap-2 text-xs text-neutral-500">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+          live
+        </span>
+        <span className="ml-auto">move {moveNo}</span>
+      </div>
+    </Link>
+  )
+}
+
+/** Responsive grid of live game cards (the dashboard's live section). */
+export function LiveGameGrid({ games }: { games: Game[] }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+      {games.map((g) => (
+        <LiveGameCard key={g.id} game={g} />
       ))}
     </div>
   )
