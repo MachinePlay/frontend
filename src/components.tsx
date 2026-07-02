@@ -4,12 +4,15 @@ import {
   engineUrl,
   gameUrl,
   runnerUrl,
+  tournamentUrl,
   type Engine,
   type Game,
   type Runner,
   type RunnerLive,
+  type Tournament,
+  type TournamentStatus,
 } from './api'
-import { relativeTime } from './format'
+import { formatLabel, relativeTime } from './format'
 
 export function Section({
   title,
@@ -216,6 +219,61 @@ export function RunnerList({
     <div className="flex flex-col gap-2">
       {runners.map((r) => (
         <RunnerRow key={r.runner_id} runner={r} live={live?.get(r.runner_id)} />
+      ))}
+    </div>
+  )
+}
+
+const STATUS_STYLES: Record<TournamentStatus, string> = {
+  running: 'text-green-400 border-green-800',
+  completed: 'text-neutral-300 border-neutral-700',
+  aborted: 'text-amber-500/90 border-amber-800',
+}
+
+/** Small outlined pill for a tournament's status. */
+export function TournamentStatusPill({ status }: { status: TournamentStatus }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${STATUS_STYLES[status]}`}
+    >
+      {status === 'running' && (
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+      )}
+      {status}
+    </span>
+  )
+}
+
+export function TournamentRow({ tournament: t }: { tournament: Tournament }) {
+  return (
+    <Link to={tournamentUrl(t.id)} className={cardClass}>
+      <div className="flex items-center gap-2 text-sm">
+        <span className="font-medium text-neutral-100 truncate">{t.name}</span>
+        <span className="text-xs text-neutral-500">{formatLabel(t.format)}</span>
+        <span className="ml-auto shrink-0">
+          <TournamentStatusPill status={t.status} />
+        </span>
+      </div>
+      <div className="text-xs text-neutral-500 mt-1 flex items-center gap-2">
+        <span>{t.participant_count} engines</span>
+        <span>·</span>
+        <span className="tabular-nums">
+          {t.games_completed}/{t.games_total} games
+        </span>
+        <span className="ml-auto">
+          {relativeTime(t.ended_at ?? t.created_at)}
+        </span>
+      </div>
+    </Link>
+  )
+}
+
+export function TournamentList({ tournaments }: { tournaments: Tournament[] }) {
+  if (tournaments.length === 0) return <Hint>no tournaments yet</Hint>
+  return (
+    <div className="flex flex-col gap-2">
+      {tournaments.map((t) => (
+        <TournamentRow key={t.id} tournament={t} />
       ))}
     </div>
   )

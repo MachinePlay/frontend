@@ -762,6 +762,187 @@
         }
       }
     },
+    "/tournament": {
+      "post": {
+        "tags": [
+          "Tournaments"
+        ],
+        "summary": "Create Tournament",
+        "description": "Create a tournament and start dispatching its pairings onto the runner.",
+        "operationId": "create_tournament",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TournamentCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TournamentDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Tournaments"
+        ],
+        "summary": "List Tournaments",
+        "operationId": "list_tournaments",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TournamentOut"
+                  },
+                  "title": "Response List Tournaments"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tournament/{tournament_id}": {
+      "get": {
+        "tags": [
+          "Tournaments"
+        ],
+        "summary": "Get Tournament",
+        "description": "Tournament detail: participants, computed standings, and its games.",
+        "operationId": "get_tournament",
+        "parameters": [
+          {
+            "name": "tournament_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Tournament Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TournamentDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tournament/{tournament_id}/cancel": {
+      "post": {
+        "tags": [
+          "Tournaments"
+        ],
+        "summary": "Cancel Tournament",
+        "description": "Stop a running tournament (creator or admin only).",
+        "operationId": "cancel_tournament",
+        "parameters": [
+          {
+            "name": "tournament_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Tournament Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Cancel Tournament"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/stream/game/{game_id}": {
       "get": {
         "tags": [
@@ -1876,6 +2057,51 @@
         "type": "object",
         "title": "RunnerUpdateRequest"
       },
+      "StandingRow": {
+        "properties": {
+          "engine_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Engine Id"
+          },
+          "engine_name": {
+            "type": "string",
+            "title": "Engine Name"
+          },
+          "played": {
+            "type": "integer",
+            "title": "Played"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "draws": {
+            "type": "integer",
+            "title": "Draws"
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "engine_id",
+          "engine_name",
+          "played",
+          "wins",
+          "draws",
+          "losses",
+          "score"
+        ],
+        "title": "StandingRow",
+        "description": "One participant's tally over the tournament's finished (ENDED) games."
+      },
       "StartGameRequest": {
         "properties": {
           "white_engine_id": {
@@ -2005,6 +2231,288 @@
           "token"
         ],
         "title": "TokenOut"
+      },
+      "TournamentCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "format": {
+            "$ref": "#/components/schemas/TournamentFormat"
+          },
+          "engine_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Engine Ids"
+          },
+          "gauntlet_head_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gauntlet Head Id"
+          },
+          "games_per_pairing": {
+            "type": "integer",
+            "title": "Games Per Pairing",
+            "default": 2
+          },
+          "runner_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Runner Id"
+          },
+          "tc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tc"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "format",
+          "engine_ids",
+          "runner_id"
+        ],
+        "title": "TournamentCreateRequest"
+      },
+      "TournamentDetailOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "format": {
+            "$ref": "#/components/schemas/TournamentFormat"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TournamentStatus"
+          },
+          "runner_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Runner Id"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "tc": {
+            "type": "string",
+            "title": "Tc"
+          },
+          "games_per_pairing": {
+            "type": "integer",
+            "title": "Games Per Pairing"
+          },
+          "gauntlet_head_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gauntlet Head Id"
+          },
+          "participants": {
+            "items": {
+              "$ref": "#/components/schemas/TournamentParticipantOut"
+            },
+            "type": "array",
+            "title": "Participants"
+          },
+          "standings": {
+            "items": {
+              "$ref": "#/components/schemas/StandingRow"
+            },
+            "type": "array",
+            "title": "Standings"
+          },
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/GameOut"
+            },
+            "type": "array",
+            "title": "Games"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "format",
+          "status",
+          "runner_id",
+          "created_by",
+          "tc",
+          "games_per_pairing",
+          "gauntlet_head_id",
+          "participants",
+          "standings",
+          "games",
+          "created_at"
+        ],
+        "title": "TournamentDetailOut"
+      },
+      "TournamentFormat": {
+        "type": "string",
+        "enum": [
+          "round_robin",
+          "gauntlet"
+        ],
+        "title": "TournamentFormat"
+      },
+      "TournamentOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "format": {
+            "$ref": "#/components/schemas/TournamentFormat"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TournamentStatus"
+          },
+          "runner_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Runner Id"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "participant_count": {
+            "type": "integer",
+            "title": "Participant Count"
+          },
+          "games_total": {
+            "type": "integer",
+            "title": "Games Total"
+          },
+          "games_completed": {
+            "type": "integer",
+            "title": "Games Completed"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "format",
+          "status",
+          "runner_id",
+          "created_by",
+          "participant_count",
+          "games_total",
+          "games_completed",
+          "created_at"
+        ],
+        "title": "TournamentOut",
+        "description": "List-view summary: metadata plus game-progress counts."
+      },
+      "TournamentParticipantOut": {
+        "properties": {
+          "engine_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Engine Id"
+          },
+          "engine_name": {
+            "type": "string",
+            "title": "Engine Name"
+          },
+          "version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Version Id"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "engine_id",
+          "engine_name",
+          "version_id",
+          "version"
+        ],
+        "title": "TournamentParticipantOut"
+      },
+      "TournamentStatus": {
+        "type": "string",
+        "enum": [
+          "running",
+          "completed",
+          "aborted"
+        ],
+        "title": "TournamentStatus"
       },
       "UserOut": {
         "properties": {
@@ -2165,6 +2673,10 @@
     {
       "name": "Games & runners",
       "description": "Start games, browse results, and see the connected runners that play them."
+    },
+    {
+      "name": "Tournaments",
+      "description": "Round-robin and gauntlet tournaments: create one on a runner and watch its pairings play out with live standings."
     },
     {
       "name": "Live streaming",

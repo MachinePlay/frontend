@@ -580,6 +580,42 @@ export type RunnerUpdateRequest = {
 };
 
 /**
+ * StandingRow
+ *
+ * One participant's tally over the tournament's finished (ENDED) games.
+ */
+export type StandingRow = {
+    /**
+     * Engine Id
+     */
+    engine_id: string;
+    /**
+     * Engine Name
+     */
+    engine_name: string;
+    /**
+     * Played
+     */
+    played: number;
+    /**
+     * Wins
+     */
+    wins: number;
+    /**
+     * Draws
+     */
+    draws: number;
+    /**
+     * Losses
+     */
+    losses: number;
+    /**
+     * Score
+     */
+    score: number;
+};
+
+/**
  * StartGameRequest
  */
 export type StartGameRequest = {
@@ -663,6 +699,171 @@ export type TokenOut = {
      */
     token: string;
 };
+
+/**
+ * TournamentCreateRequest
+ */
+export type TournamentCreateRequest = {
+    /**
+     * Name
+     */
+    name: string;
+    format: TournamentFormat;
+    /**
+     * Engine Ids
+     */
+    engine_ids: Array<string>;
+    /**
+     * Gauntlet Head Id
+     */
+    gauntlet_head_id?: string | null;
+    /**
+     * Games Per Pairing
+     */
+    games_per_pairing?: number;
+    /**
+     * Runner Id
+     */
+    runner_id: string;
+    /**
+     * Tc
+     */
+    tc?: string | null;
+};
+
+/**
+ * TournamentDetailOut
+ */
+export type TournamentDetailOut = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    format: TournamentFormat;
+    status: TournamentStatus;
+    /**
+     * Runner Id
+     */
+    runner_id: string;
+    /**
+     * Created By
+     */
+    created_by: string;
+    /**
+     * Tc
+     */
+    tc: string;
+    /**
+     * Games Per Pairing
+     */
+    games_per_pairing: number;
+    /**
+     * Gauntlet Head Id
+     */
+    gauntlet_head_id: string | null;
+    /**
+     * Participants
+     */
+    participants: Array<TournamentParticipantOut>;
+    /**
+     * Standings
+     */
+    standings: Array<StandingRow>;
+    /**
+     * Games
+     */
+    games: Array<GameOut>;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Ended At
+     */
+    ended_at?: string | null;
+};
+
+/**
+ * TournamentFormat
+ */
+export type TournamentFormat = 'round_robin' | 'gauntlet';
+
+/**
+ * TournamentOut
+ *
+ * List-view summary: metadata plus game-progress counts.
+ */
+export type TournamentOut = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    format: TournamentFormat;
+    status: TournamentStatus;
+    /**
+     * Runner Id
+     */
+    runner_id: string;
+    /**
+     * Created By
+     */
+    created_by: string;
+    /**
+     * Participant Count
+     */
+    participant_count: number;
+    /**
+     * Games Total
+     */
+    games_total: number;
+    /**
+     * Games Completed
+     */
+    games_completed: number;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Ended At
+     */
+    ended_at?: string | null;
+};
+
+/**
+ * TournamentParticipantOut
+ */
+export type TournamentParticipantOut = {
+    /**
+     * Engine Id
+     */
+    engine_id: string;
+    /**
+     * Engine Name
+     */
+    engine_name: string;
+    /**
+     * Version Id
+     */
+    version_id: string;
+    /**
+     * Version
+     */
+    version: string;
+};
+
+/**
+ * TournamentStatus
+ */
+export type TournamentStatus = 'running' | 'completed' | 'aborted';
 
 /**
  * UserOut
@@ -1270,6 +1471,127 @@ export type GetGameResponses = {
 };
 
 export type GetGameResponse = GetGameResponses[keyof GetGameResponses];
+
+export type ListTournamentsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/tournament';
+};
+
+export type ListTournamentsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListTournamentsError = ListTournamentsErrors[keyof ListTournamentsErrors];
+
+export type ListTournamentsResponses = {
+    /**
+     * Response List Tournaments
+     *
+     * Successful Response
+     */
+    200: Array<TournamentOut>;
+};
+
+export type ListTournamentsResponse = ListTournamentsResponses[keyof ListTournamentsResponses];
+
+export type CreateTournamentData = {
+    body: TournamentCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/tournament';
+};
+
+export type CreateTournamentErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateTournamentError = CreateTournamentErrors[keyof CreateTournamentErrors];
+
+export type CreateTournamentResponses = {
+    /**
+     * Successful Response
+     */
+    200: TournamentDetailOut;
+};
+
+export type CreateTournamentResponse = CreateTournamentResponses[keyof CreateTournamentResponses];
+
+export type GetTournamentData = {
+    body?: never;
+    path: {
+        /**
+         * Tournament Id
+         */
+        tournament_id: string;
+    };
+    query?: never;
+    url: '/tournament/{tournament_id}';
+};
+
+export type GetTournamentErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetTournamentError = GetTournamentErrors[keyof GetTournamentErrors];
+
+export type GetTournamentResponses = {
+    /**
+     * Successful Response
+     */
+    200: TournamentDetailOut;
+};
+
+export type GetTournamentResponse = GetTournamentResponses[keyof GetTournamentResponses];
+
+export type CancelTournamentData = {
+    body?: never;
+    path: {
+        /**
+         * Tournament Id
+         */
+        tournament_id: string;
+    };
+    query?: never;
+    url: '/tournament/{tournament_id}/cancel';
+};
+
+export type CancelTournamentErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CancelTournamentError = CancelTournamentErrors[keyof CancelTournamentErrors];
+
+export type CancelTournamentResponses = {
+    /**
+     * Response Cancel Tournament
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: boolean;
+    };
+};
+
+export type CancelTournamentResponse = CancelTournamentResponses[keyof CancelTournamentResponses];
 
 export type SseStreamData = {
     body?: never;

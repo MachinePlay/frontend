@@ -8,6 +8,7 @@ import {
   fetchEngines,
   fetchGames,
   fetchRunners,
+  fetchTournaments,
   gameUrl,
   liveStreamUrl,
   startGame as apiStartGame,
@@ -16,20 +17,17 @@ import {
   type Game,
   type LiveStreamEvent,
 } from '../api'
-import { GameList, Hint, PrimaryButton, Section } from '../components'
+import {
+  GameList,
+  Hint,
+  PrimaryButton,
+  Section,
+  TournamentList,
+} from '../components'
 import { applyLiveEvent } from '../live'
+import { DEFAULT_TC, TC_PRESETS } from '../tc'
 
 const LIVE_DISPLAY_LIMIT = 8
-
-// Time controls offered in the new-game form ("base+inc" in seconds).
-const TC_PRESETS = [
-  { value: '10+0.1', label: '10s + 0.1' },
-  { value: '30+0.3', label: '30s + 0.3' },
-  { value: '60+1', label: '1m + 1' },
-  { value: '180+2', label: '3m + 2' },
-  { value: '300+3', label: '5m + 3' },
-]
-const DEFAULT_TC = '30+0.3'
 
 function LiveGameCard({ game }: { game: Game }) {
   const moveNo = Math.max(1, Math.ceil(game.moves.length / 2))
@@ -143,6 +141,11 @@ export default function Home() {
   const { data: games, error: gamesError } = useQuery({
     queryKey: ['games'],
     queryFn: fetchGames,
+  })
+  const { data: tournaments = [] } = useQuery({
+    queryKey: ['tournaments'],
+    queryFn: fetchTournaments,
+    refetchInterval: 10_000,
   })
   // '' means "use the default" so the selects work as soon as data arrives.
   const [whiteSel, setWhiteSel] = useState('')
@@ -320,6 +323,28 @@ export default function Home() {
             ))}
           </div>
         )}
+      </Section>
+
+      <Section
+        title={
+          <span className="flex items-center gap-2">
+            tournaments
+            <Link
+              to="/tournament/new"
+              className="normal-case tracking-normal text-neutral-500 hover:text-neutral-200 transition-colors"
+            >
+              + new
+            </Link>
+            <Link
+              to="/tournament"
+              className="ml-auto normal-case tracking-normal text-neutral-500 hover:text-neutral-200 transition-colors"
+            >
+              all →
+            </Link>
+          </span>
+        }
+      >
+        <TournamentList tournaments={tournaments.slice(0, 5)} />
       </Section>
 
       <Section title="recent">

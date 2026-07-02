@@ -12,6 +12,11 @@ import type {
   Telemetry,
   StartGameResponse,
   TokenOut,
+  TournamentCreateRequest,
+  TournamentDetailOut,
+  TournamentOut,
+  TournamentParticipantOut,
+  StandingRow,
   UserOut,
   UserProfileOut,
 } from './api/generated'
@@ -136,6 +141,22 @@ export const startGame = async (req: {
 export const cancelGame = (id: string): Promise<unknown> =>
   request(`/game/${id}/cancel`, post())
 
+export const fetchTournaments = (): Promise<Tournament[]> =>
+  request('/tournament')
+
+export const fetchTournament = (id: string): Promise<TournamentDetail> =>
+  request(`/tournament/${id}`)
+
+// Create a tournament and start dispatching its pairings; returns the detail
+// (participants + standings + games). `tc`/`gauntletHeadId` are optional.
+export const createTournament = (
+  req: TournamentCreateRequest,
+): Promise<TournamentDetail> => request('/tournament', post(req))
+
+// Stop a running tournament (creator or admin only).
+export const cancelTournament = (id: string): Promise<unknown> =>
+  request(`/tournament/${id}/cancel`, post())
+
 // Mint a CLI API token for the logged-in user (plaintext shown once).
 export const createCliToken = async (): Promise<string> =>
   (await request<TokenOut>('/me/tokens', post())).token
@@ -162,6 +183,7 @@ export const engineUrl = (e: { name: string; owner_login: string }): string =>
   `/${e.owner_login}/${e.name}`
 export const gameUrl = (id: string): string => `/game/${id}`
 export const runnerUrl = (id: string): string => `/runners/${id}`
+export const tournamentUrl = (id: string): string => `/tournament/${id}`
 
 export const START_FEN =
   'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
@@ -179,5 +201,15 @@ export type StreamEvent = SseStreamResponse
 export type ApiToken = ApiTokenOut
 export type PendingSignup = PendingSignupOut
 export type UserProfile = UserProfileOut
+export type Tournament = TournamentOut
+export type TournamentDetail = TournamentDetailOut
+export type TournamentParticipant = TournamentParticipantOut
+export type Standing = StandingRow
 
-export type { GameStatus, LiveStreamEvent } from './api/generated'
+export type {
+  GameStatus,
+  LiveStreamEvent,
+  TournamentCreateRequest,
+  TournamentFormat,
+  TournamentStatus,
+} from './api/generated'

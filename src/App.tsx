@@ -11,8 +11,11 @@ import UploadInfo from './pages/UploadInfo'
 import CliToken from './pages/CliToken'
 import Register from './pages/Register'
 import UserProfile from './pages/UserProfile'
+import Tournaments from './pages/Tournaments'
+import TournamentNew from './pages/TournamentNew'
+import TournamentDetail from './pages/TournamentDetail'
 import NotFound from './pages/NotFound'
-import { ParamStub, Stub } from './pages/Stub'
+import { Stub } from './pages/Stub'
 
 export default function App() {
   return (
@@ -28,15 +31,9 @@ export default function App() {
             <Route path="runners/:id" element={<RunnerDetail />} />
             <Route path="cli" element={<CliToken />} />
             <Route path="register" element={<Register />} />
-            <Route path="tournament" element={<Stub title="tournaments" />} />
-            <Route
-              path="tournament/new"
-              element={<Stub title="new tournament" />}
-            />
-            <Route
-              path="tournament/:id"
-              element={<ParamStub title="tournament" paramName="id" />}
-            />
+            <Route path="tournament" element={<Tournaments />} />
+            <Route path="tournament/new" element={<TournamentNew />} />
+            <Route path="tournament/:id" element={<TournamentDetail />} />
             <Route
               path="about"
               element={

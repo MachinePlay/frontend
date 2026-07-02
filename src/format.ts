@@ -1,3 +1,8 @@
+import type { TournamentFormat } from './api'
+
+export const formatLabel = (f: TournamentFormat): string =>
+  f === 'round_robin' ? 'round robin' : 'gauntlet'
+
 export function relativeTime(iso: string): string {
   const t = new Date(iso).getTime()
   const diff = Date.now() - t
