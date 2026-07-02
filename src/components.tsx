@@ -49,18 +49,31 @@ const cardClass =
   'block border border-neutral-800 hover:border-neutral-600 rounded px-3 py-2 transition-colors'
 
 export function GameRow({ game }: { game: Game }) {
+  // fastchess reports "normal" for a plain finish — noise, hide it.
+  const reason =
+    game.reason && game.reason !== 'normal' ? game.reason : null
   return (
     <Link to={gameUrl(game.id)} className={cardClass}>
       <div className="flex items-center gap-2 text-sm">
         <span className="font-medium">{game.white_name}</span>
         <span className="text-neutral-500">vs</span>
         <span className="font-medium">{game.black_name}</span>
-        <span className="ml-auto font-mono text-xs text-neutral-400">
-          {game.result ?? '*'}
-        </span>
+        {game.status === 'aborted' ? (
+          <span
+            className="ml-auto text-xs text-amber-500/80"
+            title={reason ?? undefined}
+          >
+            aborted
+          </span>
+        ) : (
+          <span className="ml-auto font-mono text-xs text-neutral-400">
+            {game.status === 'playing' ? '…' : (game.result ?? '*')}
+          </span>
+        )}
       </div>
       <div className="text-xs text-neutral-500 mt-0.5">
         {relativeTime(game.ended_at ?? game.created_at)}
+        {reason && game.status !== 'aborted' && <> · {reason}</>}
       </div>
     </Link>
   )

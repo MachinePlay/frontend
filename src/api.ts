@@ -108,13 +108,15 @@ export const updateRunner = (
   })
 
 // Schedule a game; returns the new game id. Version ids are optional —
-// the backend defaults each side to the engine's latest upload.
+// the backend defaults each side to the engine's latest upload — as is the
+// time control ("base+inc" seconds), which defaults server-side.
 export const startGame = async (req: {
   whiteEngineId: string
   blackEngineId: string
   runnerId: string
   whiteVersionId?: string
   blackVersionId?: string
+  tc?: string
 }): Promise<string> => {
   const r = await request<StartGameResponse>(
     '/game',
@@ -124,10 +126,15 @@ export const startGame = async (req: {
       runner_id: req.runnerId,
       white_version_id: req.whiteVersionId ?? null,
       black_version_id: req.blackVersionId ?? null,
+      tc: req.tc ?? null,
     }),
   )
   return r.id
 }
+
+// Stop a running game; it ends as aborted with reason "cancelled".
+export const cancelGame = (id: string): Promise<unknown> =>
+  request(`/game/${id}/cancel`, post())
 
 // Mint a CLI API token for the logged-in user (plaintext shown once).
 export const createCliToken = async (): Promise<string> =>

@@ -21,6 +21,16 @@ import { applyLiveEvent } from '../live'
 
 const LIVE_DISPLAY_LIMIT = 8
 
+// Time controls offered in the new-game form ("base+inc" in seconds).
+const TC_PRESETS = [
+  { value: '10+0.1', label: '10s + 0.1' },
+  { value: '30+0.3', label: '30s + 0.3' },
+  { value: '60+1', label: '1m + 1' },
+  { value: '180+2', label: '3m + 2' },
+  { value: '300+3', label: '5m + 3' },
+]
+const DEFAULT_TC = '30+0.3'
+
 function LiveGameCard({ game }: { game: Game }) {
   const moveNo = Math.max(1, Math.ceil(game.moves.length / 2))
   return (
@@ -140,6 +150,7 @@ export default function Home() {
   const [whiteVerSel, setWhiteVerSel] = useState('')
   const [blackVerSel, setBlackVerSel] = useState('')
   const [runnerSel, setRunnerSel] = useState('')
+  const [tcSel, setTcSel] = useState(DEFAULT_TC)
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
 
@@ -182,6 +193,7 @@ export default function Home() {
         runnerId,
         whiteVersionId: whiteVersionId || undefined,
         blackVersionId: blackVersionId || undefined,
+        tc: tcSel,
       })
       navigate(gameUrl(id))
     } catch (e) {
@@ -193,7 +205,8 @@ export default function Home() {
 
   const allLive = (games ?? []).filter((g) => g.status === 'playing')
   const live = allLive.slice(0, LIVE_DISPLAY_LIMIT)
-  const recent = (games ?? []).filter((g) => g.status === 'ended').slice(0, 20)
+  // Everything terminal (ended *and* aborted) — aborted games shouldn't vanish.
+  const recent = (games ?? []).filter((g) => g.status !== 'playing').slice(0, 20)
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-8">
@@ -245,6 +258,18 @@ export default function Home() {
                   </option>
                 ))
               )}
+            </select>
+            <select
+              className={`${selectClass} w-28`}
+              value={tcSel}
+              onChange={(e) => setTcSel(e.target.value)}
+              title="time control (base + increment)"
+            >
+              {TC_PRESETS.map((tc) => (
+                <option key={tc.value} value={tc.value}>
+                  {tc.label}
+                </option>
+              ))}
             </select>
             {user ? (
               <PrimaryButton

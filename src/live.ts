@@ -12,6 +12,7 @@ function freshGame(id: string, partial: Partial<Game>): Game {
     black_version: '',
     status: 'playing',
     result: null,
+    reason: null,
     moves: [],
     fen: START_FEN,
     pgn: null,
@@ -57,7 +58,7 @@ export function applyLiveEvent(
       black_name: event.black_name ?? games[idx]?.black_name ?? '',
       fen: event.fen,
       moves: event.moves,
-      status: event.status === 'ended' ? 'ended' : 'playing',
+      status: event.status ?? 'playing',
       result: event.result,
       white_clock: event.white_clock,
       black_clock: event.black_clock,
@@ -81,8 +82,9 @@ export function applyLiveEvent(
   if (event.type === 'game_end') {
     return replaceAt(games, idx, {
       ...games[idx],
-      status: 'ended',
+      status: event.status ?? 'ended',
       result: event.result,
+      reason: event.reason ?? null,
       ended_at: new Date().toISOString(),
     })
   }

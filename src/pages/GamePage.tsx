@@ -3,15 +3,10 @@ import { Link, useParams } from 'react-router'
 import type { Api } from '@lichess-org/chessground/api'
 import { Chess } from 'chess.js'
 import { Chessground } from '../Chessground'
-import {
-  fetchGame,
-  gameStreamUrl,
-  type GameStatus,
-  type StreamEvent,
-} from '../api'
+import { cancelGame, runnerUrl, type GameStatus } from '../api'
+import { useAuth } from '../auth-context'
 import { formatClock } from '../format'
-
-type Clocks = { white: number; black: number; updatedAt: number }
+import { useGame } from '../useGame'
 
 const PIECE_NAMES: Record<string, string> = {
   q: 'queen',
@@ -78,22 +73,145 @@ function replay(moves: string[], ply: number) {
   return { fen: chess.fen(), lastFrom, lastTo }
 }
 
+/** One side's row above/below the board: color label, engine name + version,
+    captured pieces, and the (possibly ticking) clock. */
+function PlayerBar({
+  color,
+  name,
+  version,
+  pieces,
+  clock,
+  active,
+}: {
+  color: 'white' | 'black'
+  name: string | null
+  version: string | null
+  pieces: CapturedPiece[]
+  clock: number | null
+  active: boolean
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm max-w-[var(--board-size)]">
+      <span className="text-neutral-500 uppercase tracking-wide text-xs">
+        {color}
+      </span>
+      <span className="text-neutral-100 font-medium">{name ?? '—'}</span>
+      {version && (
+        <span className="text-neutral-500 text-xs font-mono">{version}</span>
+      )}
+      <CapturedPieces pieces={pieces} />
+      {clock !== null && (
+        <span
+          className={`ml-auto font-mono tabular-nums px-1.5 py-0.5 rounded ${
+            active
+              ? 'bg-neutral-100 text-neutral-900'
+              : 'bg-neutral-900 text-neutral-400 border border-neutral-800'
+          }`}
+        >
+          {formatClock(clock)}
+        </span>
+      )}
+    </div>
+  )
+}
+
+/** Terminal state under the move list: result + termination reason, or a
+    cancel control while the game is playing (logged-in users only). */
+function GameStatusPanel({
+  gameId,
+  status,
+  result,
+  reason,
+}: {
+  gameId: string
+  status: GameStatus | null
+  result: string | null
+  reason: string | null
+}) {
+  const { user } = useAuth()
+  const [armed, setArmed] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Disarm the confirm step after a moment so a stray click can't linger.
+  useEffect(() => {
+    if (!armed) return
+    const t = setTimeout(() => setArmed(false), 4000)
+    return () => clearTimeout(t)
+  }, [armed])
+
+  const doCancel = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await cancelGame(gameId)
+      // The game's SSE stream delivers the aborted game_end; no local state.
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+      setArmed(false)
+    }
+  }
+
+  if (status === 'playing') {
+    return (
+      <div className="flex flex-col items-center gap-1 text-sm">
+        <span className="text-neutral-500 italic">playing</span>
+        {user && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => (armed ? void doCancel() : setArmed(true))}
+            className={`text-xs px-2 py-0.5 rounded border transition-colors disabled:opacity-40 ${
+              armed
+                ? 'border-red-700 text-red-400 hover:bg-red-950'
+                : 'border-neutral-700 text-neutral-400 hover:bg-neutral-800'
+            }`}
+          >
+            {busy ? 'cancelling…' : armed ? 'really cancel?' : 'cancel game'}
+          </button>
+        )}
+        {error && <span className="text-red-400 text-xs">{error}</span>}
+      </div>
+    )
+  }
+
+  if (status === null) return null
+
+  // "normal" is fastchess's Termination for a plain finish — noise, hide it.
+  const detail = reason && reason !== 'normal' ? reason : null
+  return (
+    <div className="flex flex-col items-center gap-0.5 text-sm">
+      {status === 'aborted' ? (
+        <span className="text-amber-500/90 font-medium">aborted</span>
+      ) : (
+        <span className="text-neutral-100 font-medium">{result ?? '*'}</span>
+      )}
+      {detail && <span className="text-neutral-500 text-xs">{detail}</span>}
+    </div>
+  )
+}
+
 export default function GamePage() {
   const { id } = useParams<{ id: string }>()
   const apiRef = useRef<Api | null>(null)
-  const [connStatus, setConnStatus] = useState('connecting')
-  const [loadError, setLoadError] = useState<string | null>(null)
-  const [whiteName, setWhiteName] = useState<string | null>(null)
-  const [blackName, setBlackName] = useState<string | null>(null)
-  // Which uploaded version each side plays; from the initial fetch only
-  // (stream events don't carry it, and it never changes mid-game).
-  const [whiteVersion, setWhiteVersion] = useState<string | null>(null)
-  const [blackVersion, setBlackVersion] = useState<string | null>(null)
-  const [moves, setMoves] = useState<string[]>([])
-  const [result, setResult] = useState<string | null>(null)
+  const {
+    loadError,
+    connStatus,
+    whiteName,
+    blackName,
+    whiteVersion,
+    blackVersion,
+    tc,
+    runnerId,
+    moves,
+    result,
+    reason,
+    status: gameStatus,
+    clocks,
+  } = useGame(id)
   const [orientation, setOrientation] = useState<'white' | 'black'>('white')
-  const [clocks, setClocks] = useState<Clocks | null>(null)
-  const [gameStatus, setGameStatus] = useState<GameStatus | null>(null)
   const [viewPly, setViewPly] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const moveListRef = useRef<HTMLOListElement | null>(null)
@@ -107,82 +225,6 @@ export default function GamePage() {
     () => replay(moves, effectiveViewPly),
     [moves, effectiveViewPly],
   )
-
-  useEffect(() => {
-    if (!id) return
-    let cancelled = false
-    fetchGame(id)
-      .then((g) => {
-        if (cancelled) return
-        setWhiteName(g.white_name)
-        setBlackName(g.black_name)
-        setWhiteVersion(g.white_version)
-        setBlackVersion(g.black_version)
-        setMoves(g.moves)
-        setResult(g.result)
-        setGameStatus(g.status)
-        setClocks({
-          white: g.white_clock,
-          black: g.black_clock,
-          updatedAt: Date.now(),
-        })
-      })
-      .catch((e: unknown) => {
-        if (!cancelled)
-          setLoadError(e instanceof Error ? e.message : String(e))
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [id])
-
-  useEffect(() => {
-    if (!id) return
-    if (gameStatus !== 'playing') return
-    const es = new EventSource(gameStreamUrl(id))
-    es.onopen = () => setConnStatus('connected')
-    es.onerror = () =>
-      setConnStatus(
-        es.readyState === EventSource.CLOSED ? 'disconnected' : 'error',
-      )
-    es.onmessage = (e) => {
-      const event: StreamEvent = JSON.parse(e.data)
-
-      if (event.type === 'fen') {
-        setWhiteName(event.white_name)
-        setBlackName(event.black_name)
-        setMoves(event.moves ?? [])
-        setResult(event.result)
-        setClocks({
-          white: event.white_clock,
-          black: event.black_clock,
-          updatedAt: Date.now(),
-        })
-        setGameStatus(event.status)
-      } else if (event.type === 'game_start') {
-        setResult(null)
-        setWhiteName(event.white_name)
-        setBlackName(event.black_name)
-        setMoves([])
-        setClocks(null)
-        setGameStatus('playing')
-        setViewPly(null)
-      } else if (event.type === 'move') {
-        setMoves((prev) => [...prev, event.san])
-        setClocks({
-          white: event.white_clock,
-          black: event.black_clock,
-          updatedAt: Date.now(),
-        })
-      } else if (event.type === 'game_end') {
-        setResult(event.result)
-        setGameStatus('ended')
-        es.close()
-        setConnStatus('disconnected')
-      }
-    }
-    return () => es.close()
-  }, [id, gameStatus])
 
   useEffect(() => {
     apiRef.current?.set({
@@ -245,7 +287,6 @@ export default function GamePage() {
   const { byWhite, byBlack } = captured(displayFen)
   const sideToMove: 'white' | 'black' =
     displayFen.split(' ')[1] === 'b' ? 'black' : 'white'
-  const showClocks = clocks !== null
   const elapsedSinceUpdate = clocks
     ? Math.max(0, (now - clocks.updatedAt) / 1000)
     : 0
@@ -259,19 +300,25 @@ export default function GamePage() {
       ? Math.max(0, clocks.black - elapsedSinceUpdate)
       : clocks.black
     : null
+  const whiteBar = {
+    color: 'white',
+    name: whiteName,
+    version: whiteVersion,
+    pieces: byWhite,
+    clock: displayWhite,
+    active: isClockTicking && sideToMove === 'white',
+  } as const
+  const blackBar = {
+    color: 'black',
+    name: blackName,
+    version: blackVersion,
+    pieces: byBlack,
+    clock: displayBlack,
+    active: isClockTicking && sideToMove === 'black',
+  } as const
   const topIsBlack = orientation === 'white'
-  const topName = topIsBlack ? blackName : whiteName
-  const bottomName = topIsBlack ? whiteName : blackName
-  const topVersion = topIsBlack ? blackVersion : whiteVersion
-  const bottomVersion = topIsBlack ? whiteVersion : blackVersion
-  const topCaptured = topIsBlack ? byBlack : byWhite
-  const bottomCaptured = topIsBlack ? byWhite : byBlack
-  const topClock = topIsBlack ? displayBlack : displayWhite
-  const bottomClock = topIsBlack ? displayWhite : displayBlack
-  const topActive =
-    isClockTicking && sideToMove === (topIsBlack ? 'black' : 'white')
-  const bottomActive =
-    isClockTicking && sideToMove === (topIsBlack ? 'white' : 'black')
+  const top = topIsBlack ? blackBar : whiteBar
+  const bottom = topIsBlack ? whiteBar : blackBar
 
   if (loadError) {
     return (
@@ -284,33 +331,13 @@ export default function GamePage() {
     )
   }
 
-  const showBanner = gameStatus === 'playing'
+  const showFollowToggle = gameStatus === 'playing'
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col items-center gap-4 sm:gap-6">
       <div className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[auto_auto] sm:gap-x-3">
-        <div className="flex flex-wrap items-center gap-2 text-sm max-w-[var(--board-size)] sm:col-start-1 sm:row-start-1">
-          <span className="text-neutral-500 uppercase tracking-wide text-xs">
-            {topIsBlack ? 'black' : 'white'}
-          </span>
-          <span className="text-neutral-100 font-medium">{topName ?? '—'}</span>
-          {topVersion && (
-            <span className="text-neutral-500 text-xs font-mono">
-              {topVersion}
-            </span>
-          )}
-          <CapturedPieces pieces={topCaptured} />
-          {showClocks && topClock !== null && (
-            <span
-              className={`ml-auto font-mono tabular-nums px-1.5 py-0.5 rounded ${
-                topActive
-                  ? 'bg-neutral-100 text-neutral-900'
-                  : 'bg-neutral-900 text-neutral-400 border border-neutral-800'
-              }`}
-            >
-              {formatClock(topClock)}
-            </span>
-          )}
+        <div className="sm:col-start-1 sm:row-start-1">
+          <PlayerBar {...top} />
         </div>
         <div className="relative sm:col-start-1 sm:row-start-2">
           <Chessground
@@ -352,30 +379,8 @@ export default function GamePage() {
             </svg>
           </button>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm max-w-[var(--board-size)] sm:col-start-1 sm:row-start-3">
-          <span className="text-neutral-500 uppercase tracking-wide text-xs">
-            {topIsBlack ? 'white' : 'black'}
-          </span>
-          <span className="text-neutral-100 font-medium">
-            {bottomName ?? '—'}
-          </span>
-          {bottomVersion && (
-            <span className="text-neutral-500 text-xs font-mono">
-              {bottomVersion}
-            </span>
-          )}
-          <CapturedPieces pieces={bottomCaptured} />
-          {showClocks && bottomClock !== null && (
-            <span
-              className={`ml-auto font-mono tabular-nums px-1.5 py-0.5 rounded ${
-                bottomActive
-                  ? 'bg-neutral-100 text-neutral-900'
-                  : 'bg-neutral-900 text-neutral-400 border border-neutral-800'
-              }`}
-            >
-              {formatClock(bottomClock)}
-            </span>
-          )}
+        <div className="sm:col-start-1 sm:row-start-3">
+          <PlayerBar {...bottom} />
         </div>
         <div className="flex flex-col w-full h-32 sm:w-48 sm:h-[var(--board-size)] sm:col-start-2 sm:row-start-2 bg-neutral-900 border border-neutral-800 rounded overflow-hidden">
           <ol
@@ -429,7 +434,7 @@ export default function GamePage() {
               })
             )}
           </ol>
-          {showBanner && (
+          {showFollowToggle && (
             <button
               type="button"
               onClick={() => jumpTo(moves.length)}
@@ -454,12 +459,15 @@ export default function GamePage() {
             </button>
           )}
         </div>
-        <div className="text-sm text-center sm:col-start-2 sm:row-start-3">
-          {gameStatus === 'ended' && result ? (
-            <span className="text-neutral-100 font-medium">{result}</span>
-          ) : gameStatus === 'playing' ? (
-            <span className="text-neutral-500 italic">playing</span>
-          ) : null}
+        <div className="text-center sm:col-start-2 sm:row-start-3">
+          {id && (
+            <GameStatusPanel
+              gameId={id}
+              status={gameStatus}
+              result={result}
+              reason={reason}
+            />
+          )}
         </div>
       </div>
 
@@ -481,6 +489,15 @@ export default function GamePage() {
           move {Math.max(1, Math.ceil(effectiveViewPly / 2))}
           {effectiveViewPly < moves.length ? ` / ${Math.ceil(moves.length / 2)}` : ''}
         </span>
+        {tc && <span className="font-mono">{tc}</span>}
+        {runnerId && (
+          <Link
+            to={runnerUrl(runnerId)}
+            className="hover:text-neutral-300 transition-colors"
+          >
+            runner
+          </Link>
+        )}
       </div>
     </div>
   )
