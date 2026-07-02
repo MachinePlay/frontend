@@ -671,6 +671,54 @@
         }
       }
     },
+    "/game/{game_id}/cancel": {
+      "post": {
+        "tags": [
+          "Games & runners"
+        ],
+        "summary": "Cancel Game",
+        "description": "Stop a running game: aborts it and kills its engine containers.",
+        "operationId": "cancel_game",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Cancel Game"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/game/{game_id}": {
       "get": {
         "tags": [
@@ -1233,6 +1281,21 @@
               }
             ],
             "title": "Pgn"
+          },
+          "status": {
+            "$ref": "#/components/schemas/GameStatus",
+            "default": "ended"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
           }
         },
         "type": "object",
@@ -1288,6 +1351,17 @@
             ],
             "title": "Result"
           },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
           "moves": {
             "items": {
               "type": "string"
@@ -1317,6 +1391,41 @@
           "black_clock": {
             "type": "number",
             "title": "Black Clock"
+          },
+          "tc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tc"
+          },
+          "runner_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runner Id"
+          },
+          "tournament_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tournament Id"
           },
           "created_at": {
             "type": "string",
@@ -1806,6 +1915,17 @@
               }
             ],
             "title": "Black Version Id"
+          },
+          "tc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tc"
           }
         },
         "type": "object",
@@ -1823,10 +1943,6 @@
             "format": "uuid",
             "title": "Id"
           },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
           "white": {
             "type": "string",
             "format": "uuid",
@@ -1841,7 +1957,6 @@
         "type": "object",
         "required": [
           "id",
-          "status",
           "white",
           "black"
         ],

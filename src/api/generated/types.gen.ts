@@ -231,6 +231,11 @@ export type GameEndEvent = {
      * Pgn
      */
     pgn?: string | null;
+    status?: GameStatus;
+    /**
+     * Reason
+     */
+    reason?: string | null;
 };
 
 /**
@@ -271,6 +276,10 @@ export type GameOut = {
      */
     result: string | null;
     /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
      * Moves
      */
     moves: Array<string>;
@@ -290,6 +299,18 @@ export type GameOut = {
      * Black Clock
      */
     black_clock: number;
+    /**
+     * Tc
+     */
+    tc?: string | null;
+    /**
+     * Runner Id
+     */
+    runner_id?: string | null;
+    /**
+     * Tournament Id
+     */
+    tournament_id?: string | null;
     /**
      * Created At
      */
@@ -582,6 +603,10 @@ export type StartGameRequest = {
      * Black Version Id
      */
     black_version_id?: string | null;
+    /**
+     * Tc
+     */
+    tc?: string | null;
 };
 
 /**
@@ -592,10 +617,6 @@ export type StartGameResponse = {
      * Id
      */
     id: string;
-    /**
-     * Status
-     */
-    status: string;
     /**
      * White
      */
@@ -1185,6 +1206,40 @@ export type StartGameResponses = {
 };
 
 export type StartGameResponse2 = StartGameResponses[keyof StartGameResponses];
+
+export type CancelGameData = {
+    body?: never;
+    path: {
+        /**
+         * Game Id
+         */
+        game_id: string;
+    };
+    query?: never;
+    url: '/game/{game_id}/cancel';
+};
+
+export type CancelGameErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CancelGameError = CancelGameErrors[keyof CancelGameErrors];
+
+export type CancelGameResponses = {
+    /**
+     * Response Cancel Game
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: boolean;
+    };
+};
+
+export type CancelGameResponse = CancelGameResponses[keyof CancelGameResponses];
 
 export type GetGameData = {
     body?: never;
