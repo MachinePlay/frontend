@@ -1520,6 +1520,7 @@
       "GameStatus": {
         "type": "string",
         "enum": [
+          "pending",
           "playing",
           "ended",
           "aborted"

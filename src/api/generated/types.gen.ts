@@ -346,7 +346,7 @@ export type GameStartEvent = {
 /**
  * GameStatus
  */
-export type GameStatus = 'playing' | 'ended' | 'aborted';
+export type GameStatus = 'pending' | 'playing' | 'ended' | 'aborted';
 
 /**
  * HTTPValidationError
