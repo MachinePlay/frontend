@@ -270,6 +270,14 @@ export type GameOut = {
      * Black Version
      */
     black_version: string;
+    /**
+     * White Version Id
+     */
+    white_version_id?: string | null;
+    /**
+     * Black Version Id
+     */
+    black_version_id?: string | null;
     status: GameStatus;
     /**
      * Result
@@ -583,6 +591,8 @@ export type RunnerUpdateRequest = {
  * StandingRow
  *
  * One participant's tally over the tournament's finished (ENDED) games.
+ *
+ * A participant is an (engine, version) pair; version_id is its stable key.
  */
 export type StandingRow = {
     /**
@@ -593,6 +603,14 @@ export type StandingRow = {
      * Engine Name
      */
     engine_name: string;
+    /**
+     * Version Id
+     */
+    version_id: string;
+    /**
+     * Version
+     */
+    version: string;
     /**
      * Played
      */
@@ -714,9 +732,9 @@ export type TournamentCreateRequest = {
      */
     entries: Array<TournamentEntry>;
     /**
-     * Gauntlet Head Id
+     * Gauntlet Head Index
      */
-    gauntlet_head_id?: string | null;
+    gauntlet_head_index?: number | null;
     /**
      * Games Per Pairing
      */
@@ -762,9 +780,9 @@ export type TournamentDetailOut = {
      */
     games_per_pairing: number;
     /**
-     * Gauntlet Head Id
+     * Gauntlet Head Version Id
      */
-    gauntlet_head_id: string | null;
+    gauntlet_head_version_id: string | null;
     /**
      * Participants
      */

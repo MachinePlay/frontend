@@ -20,15 +20,16 @@ import {
 } from '../components'
 import { useAuth } from '../auth-context'
 import { applyLiveEvent } from '../live'
+import { computeStandings } from '../standings'
 import { formatLabel, relativeTime } from '../format'
 import NotFound from './NotFound'
 
 function StandingsTable({
   standings,
-  headId,
+  headVersionId,
 }: {
   standings: Standing[]
-  headId: string | null
+  headVersionId: string | null
 }) {
   if (standings.length === 0) return <Hint>no results yet</Hint>
   return (
@@ -48,7 +49,7 @@ function StandingsTable({
         <tbody>
           {standings.map((row, i) => (
             <tr
-              key={row.engine_id}
+              key={row.version_id}
               className="border-t border-neutral-800/70 text-neutral-200"
             >
               <td className="py-1.5 pr-2 text-neutral-500 tabular-nums">
@@ -56,7 +57,10 @@ function StandingsTable({
               </td>
               <td className="py-1.5 pr-2">
                 {row.engine_name}
-                {headId === row.engine_id && (
+                <span className="ml-1.5 text-xs text-neutral-500">
+                  {row.version}
+                </span>
+                {headVersionId === row.version_id && (
                   <span className="ml-2 text-xs text-green-400">head</span>
                 )}
               </td>
@@ -171,6 +175,9 @@ export default function TournamentDetail() {
     t.status === 'running' &&
     (user?.login === t.created_by || user?.is_admin === true)
   const live = t.games.filter((g) => g.status === 'playing')
+  // Derived from the games (which the SSE feed keeps fresh) so standings update
+  // the instant a game ends, not just on the next poll.
+  const standings = computeStandings(t.participants, t.games)
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-5">
@@ -206,7 +213,10 @@ export default function TournamentDetail() {
       </div>
 
       <Section title="standings">
-        <StandingsTable standings={t.standings} headId={t.gauntlet_head_id} />
+        <StandingsTable
+          standings={standings}
+          headVersionId={t.gauntlet_head_version_id}
+        />
       </Section>
 
       {live.length > 0 && (

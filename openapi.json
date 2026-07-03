@@ -1518,6 +1518,30 @@
             "type": "string",
             "title": "Black Version"
           },
+          "white_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "White Version Id"
+          },
+          "black_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Black Version Id"
+          },
           "status": {
             "$ref": "#/components/schemas/GameStatus"
           },
@@ -2068,6 +2092,15 @@
             "type": "string",
             "title": "Engine Name"
           },
+          "version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Version Id"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
           "played": {
             "type": "integer",
             "title": "Played"
@@ -2093,6 +2126,8 @@
         "required": [
           "engine_id",
           "engine_name",
+          "version_id",
+          "version",
           "played",
           "wins",
           "draws",
@@ -2100,7 +2135,7 @@
           "score"
         ],
         "title": "StandingRow",
-        "description": "One participant's tally over the tournament's finished (ENDED) games."
+        "description": "One participant's tally over the tournament's finished (ENDED) games.\n\nA participant is an (engine, version) pair; version_id is its stable key."
       },
       "StartGameRequest": {
         "properties": {
@@ -2248,17 +2283,16 @@
             "type": "array",
             "title": "Entries"
           },
-          "gauntlet_head_id": {
+          "gauntlet_head_index": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uuid"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Gauntlet Head Id"
+            "title": "Gauntlet Head Index"
           },
           "games_per_pairing": {
             "type": "integer",
@@ -2325,7 +2359,7 @@
             "type": "integer",
             "title": "Games Per Pairing"
           },
-          "gauntlet_head_id": {
+          "gauntlet_head_version_id": {
             "anyOf": [
               {
                 "type": "string",
@@ -2335,7 +2369,7 @@
                 "type": "null"
               }
             ],
-            "title": "Gauntlet Head Id"
+            "title": "Gauntlet Head Version Id"
           },
           "participants": {
             "items": {
@@ -2386,7 +2420,7 @@
           "created_by",
           "tc",
           "games_per_pairing",
-          "gauntlet_head_id",
+          "gauntlet_head_version_id",
           "participants",
           "standings",
           "games",

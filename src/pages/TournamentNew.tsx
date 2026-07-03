@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth-context'
@@ -18,82 +18,95 @@ const selectClass = 'bg-neutral-900 border border-neutral-800 rounded px-2 py-1'
 const fieldClass =
   'bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-sm'
 
+// One participant slot: an engine + version. `key` is a stable local id so rows
+// keep their identity (and the gauntlet head reference) across edits/removals.
+// `versionId` is '' for "latest".
+type Entry = { key: string; engineId: string; versionId: string }
+
+const mkEntry = (engineId: string): Entry => ({
+  key: crypto.randomUUID(),
+  engineId,
+  versionId: '',
+})
+
 // C(n,2) for round robin, (n-1) for gauntlet — the number of distinct pairings.
 function pairingCount(format: TournamentFormat, n: number): number {
   if (n < 2) return 0
   return format === 'gauntlet' ? n - 1 : (n * (n - 1)) / 2
 }
 
-// One selectable engine: checkbox + name, plus a version picker and a
-// gauntlet-head control once it's selected. `versionId` is '' for "latest".
-function EngineEntryRow({
-  engine,
-  checked,
+// One participant row: engine + version pickers, a gauntlet-head control and a
+// remove button. The same engine can appear on several rows at different
+// versions.
+function EntryRow({
+  entry,
+  engines,
   gauntlet,
   isHead,
-  versionId,
-  onToggle,
+  onEngine,
   onVersion,
   onMakeHead,
+  onRemove,
 }: {
-  engine: Engine
-  checked: boolean
+  entry: Entry
+  engines: Engine[]
   gauntlet: boolean
   isHead: boolean
-  versionId: string
-  onToggle: () => void
+  onEngine: (engineId: string) => void
   onVersion: (versionId: string) => void
   onMakeHead: () => void
+  onRemove: () => void
 }) {
-  // Only fetch versions once the engine is actually selected.
-  const versions = useEngineVersions(checked ? engine : undefined)
+  const engine = engines.find((e) => e.id === entry.engineId)
+  const versions = useEngineVersions(engine)
   return (
-    <div
-      className={`flex items-center gap-2 rounded border px-3 py-2 transition-colors ${
-        checked
-          ? 'border-neutral-600 bg-neutral-900'
-          : 'border-neutral-800 hover:border-neutral-700'
-      }`}
-    >
-      <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
-        <input
-          type="checkbox"
-          className="accent-neutral-300"
-          checked={checked}
-          onChange={onToggle}
-        />
-        <span className="text-sm text-neutral-100 truncate">
-          {engine.owner_login}/{engine.name}
-        </span>
-      </label>
-      {checked && (
-        <select
-          className={`${selectClass} text-xs w-28 shrink-0`}
-          value={versionId}
-          onChange={(e) => onVersion(e.target.value)}
-          title="version to enter"
-        >
-          <option value="">latest</option>
-          {versions.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.version}
-            </option>
-          ))}
-        </select>
-      )}
+    <div className="flex items-center gap-2 rounded border border-neutral-800 px-3 py-2">
+      <select
+        className={`${selectClass} text-sm flex-1 min-w-0`}
+        value={entry.engineId}
+        onChange={(e) => onEngine(e.target.value)}
+      >
+        {engines.map((e) => (
+          <option key={e.id} value={e.id}>
+            {e.owner_login}/{e.name}
+          </option>
+        ))}
+      </select>
+      <select
+        className={`${selectClass} text-xs w-24 shrink-0`}
+        value={entry.versionId}
+        onChange={(e) => onVersion(e.target.value)}
+        title="version to enter"
+      >
+        <option value="">latest</option>
+        {versions.map((v) => (
+          <option key={v.id} value={v.id}>
+            {v.version}
+          </option>
+        ))}
+      </select>
       {gauntlet &&
-        checked &&
         (isHead ? (
-          <span className="text-xs text-green-400 shrink-0">head</span>
+          <span className="text-xs text-green-400 shrink-0 w-16 text-center">
+            head
+          </span>
         ) : (
           <button
             type="button"
             onClick={onMakeHead}
-            className="text-xs text-neutral-500 hover:text-neutral-200 shrink-0"
+            className="text-xs text-neutral-500 hover:text-neutral-200 shrink-0 w-16 text-center"
           >
             make head
           </button>
         ))}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="text-neutral-600 hover:text-red-400 shrink-0"
+        title="remove"
+      >
+        ✕
+      </button>
     </div>
   )
 }
@@ -115,58 +128,58 @@ export default function TournamentNew() {
 
   const [name, setName] = useState('')
   const [format, setFormat] = useState<TournamentFormat>('round_robin')
-  const [selected, setSelected] = useState<Set<string>>(new Set())
-  // engine id -> chosen version id ('' / absent means the engine's latest).
-  const [versionSel, setVersionSel] = useState<Map<string, string>>(new Map())
-  const [headId, setHeadId] = useState('')
+  const [entries, setEntries] = useState<Entry[]>([])
+  const [seeded, setSeeded] = useState(false)
+  const [headKey, setHeadKey] = useState('')
   const [gamesPerPairing, setGamesPerPairing] = useState(2)
   const [runnerSel, setRunnerSel] = useState('')
   const [tcSel, setTcSel] = useState(DEFAULT_TC)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Seed two rows the first time the engine list arrives, so the form is usable
+  // at once. Done during render (not in an effect) to avoid an extra commit.
+  if (!seeded && engines.length > 0) {
+    setSeeded(true)
+    setEntries([
+      mkEntry(engines[0].id),
+      mkEntry(engines[Math.min(1, engines.length - 1)].id),
+    ])
+  }
+
   const onlineRunners = runners.filter((r) => r.online)
   const runnerId =
     runnerSel || onlineRunners[0]?.runner_id || runners[0]?.runner_id || ''
   const selectedRunner = runners.find((r) => r.runner_id === runnerId)
 
-  const selectedEngines = useMemo(
-    () => engines.filter((e) => selected.has(e.id)),
-    [engines, selected],
-  )
-  // The gauntlet head must be one of the chosen engines; default to the first.
-  const effectiveHead =
+  // The gauntlet head is one of the rows; default to the first.
+  const effectiveHeadKey =
     format === 'gauntlet'
-      ? selected.has(headId)
-        ? headId
-        : (selectedEngines[0]?.id ?? '')
+      ? entries.some((e) => e.key === headKey)
+        ? headKey
+        : (entries[0]?.key ?? '')
       : ''
 
-  const games = pairingCount(format, selected.size) * gamesPerPairing
+  // Two rows with the identical engine+version are a duplicate. (An explicit
+  // version equal to "latest" is only caught server-side.)
+  const dup =
+    new Set(entries.map((e) => `${e.engineId}|${e.versionId}`)).size !==
+    entries.length
 
-  const toggle = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+  const games = pairingCount(format, entries.length) * gamesPerPairing
 
-  const setVersion = (engineId: string, versionId: string) => {
-    setVersionSel((prev) => {
-      const next = new Map(prev)
-      next.set(engineId, versionId)
-      return next
-    })
-  }
+  const updateEntry = (key: string, patch: Partial<Entry>) =>
+    setEntries((prev) =>
+      prev.map((e) => (e.key === key ? { ...e, ...patch } : e)),
+    )
 
   const valid =
     name.trim() !== '' &&
-    selected.size >= 2 &&
+    entries.length >= 2 &&
+    !dup &&
     gamesPerPairing >= 1 &&
     selectedRunner?.online === true &&
-    (format !== 'gauntlet' || effectiveHead !== '')
+    (format !== 'gauntlet' || effectiveHeadKey !== '')
 
   const submit = async () => {
     if (!valid) return
@@ -176,11 +189,14 @@ export default function TournamentNew() {
       const detail = await createTournament({
         name: name.trim(),
         format,
-        entries: [...selected].map((engine_id) => ({
-          engine_id,
-          version_id: versionSel.get(engine_id) || null,
+        entries: entries.map((e) => ({
+          engine_id: e.engineId,
+          version_id: e.versionId || null,
         })),
-        gauntlet_head_id: format === 'gauntlet' ? effectiveHead : null,
+        gauntlet_head_index:
+          format === 'gauntlet'
+            ? entries.findIndex((e) => e.key === effectiveHeadKey)
+            : null,
         games_per_pairing: gamesPerPairing,
         runner_id: runnerId,
         tc: tcSel,
@@ -285,9 +301,9 @@ export default function TournamentNew() {
       <Section
         title={
           <>
-            engines
+            participants
             <span className="ml-2 text-neutral-400 normal-case">
-              ({selected.size} selected)
+              ({entries.length})
             </span>
           </>
         }
@@ -295,20 +311,38 @@ export default function TournamentNew() {
         {engines.length === 0 ? (
           <Hint>no engines to enter — upload one first</Hint>
         ) : (
-          <div className="flex flex-col gap-1 max-h-72 overflow-y-auto pr-1">
-            {engines.map((e) => (
-              <EngineEntryRow
-                key={e.id}
-                engine={e}
-                checked={selected.has(e.id)}
-                gauntlet={format === 'gauntlet'}
-                isHead={effectiveHead === e.id}
-                versionId={versionSel.get(e.id) ?? ''}
-                onToggle={() => toggle(e.id)}
-                onVersion={(v) => setVersion(e.id, v)}
-                onMakeHead={() => setHeadId(e.id)}
-              />
-            ))}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1 max-h-80 overflow-y-auto pr-1">
+              {entries.map((entry) => (
+                <EntryRow
+                  key={entry.key}
+                  entry={entry}
+                  engines={engines}
+                  gauntlet={format === 'gauntlet'}
+                  isHead={effectiveHeadKey === entry.key}
+                  onEngine={(engineId) =>
+                    updateEntry(entry.key, { engineId, versionId: '' })
+                  }
+                  onVersion={(versionId) => updateEntry(entry.key, { versionId })}
+                  onMakeHead={() => setHeadKey(entry.key)}
+                  onRemove={() =>
+                    setEntries((prev) => prev.filter((e) => e.key !== entry.key))
+                  }
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setEntries((prev) => [...prev, mkEntry(engines[0].id)])}
+              className="self-start text-sm text-neutral-400 hover:text-neutral-100 transition-colors"
+            >
+              + add participant
+            </button>
+            {dup && (
+              <span className="text-amber-500/80 text-xs">
+                the same engine + version is entered more than once
+              </span>
+            )}
           </div>
         )}
       </Section>
@@ -321,7 +355,7 @@ export default function TournamentNew() {
         ) : (
           <PrimaryButton onClick={login}>sign in to create</PrimaryButton>
         )}
-        {selected.size >= 2 && (
+        {entries.length >= 2 && !dup && (
           <span className="text-xs text-neutral-500">
             {games} game{games === 1 ? '' : 's'} on {selectedRunner?.name ?? '—'}
           </span>
