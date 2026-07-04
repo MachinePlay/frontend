@@ -87,6 +87,14 @@ export const fetchEngineByName = (
 ): Promise<EngineDetail> =>
   request(`/user/${encodeURIComponent(login)}/${encodeURIComponent(name)}`)
 
+// Delete an engine, its versions, and its registry images (owner/admin only).
+// Refused with a 409 while the engine has games pending or playing.
+export const deleteEngine = (login: string, name: string): Promise<unknown> =>
+  request(`/user/${encodeURIComponent(login)}/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+
 export const fetchUserProfile = (login: string): Promise<UserProfile> =>
   request(`/user/${encodeURIComponent(login)}`)
 

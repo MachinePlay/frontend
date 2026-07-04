@@ -1241,35 +1241,43 @@ export type RegisterEngineResponses = {
 
 export type RegisterEngineResponse = RegisterEngineResponses[keyof RegisterEngineResponses];
 
-export type UserProfileData = {
+export type DeleteEngineData = {
     body?: never;
     path: {
         /**
          * Login
          */
         login: string;
+        /**
+         * Engine Name
+         */
+        engine_name: string;
     };
     query?: never;
-    url: '/user/{login}';
+    url: '/user/{login}/{engine_name}';
 };
 
-export type UserProfileErrors = {
+export type DeleteEngineErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type UserProfileError = UserProfileErrors[keyof UserProfileErrors];
+export type DeleteEngineError = DeleteEngineErrors[keyof DeleteEngineErrors];
 
-export type UserProfileResponses = {
+export type DeleteEngineResponses = {
     /**
+     * Response Delete Engine
+     *
      * Successful Response
      */
-    200: UserProfileOut;
+    200: {
+        [key: string]: boolean;
+    };
 };
 
-export type UserProfileResponse = UserProfileResponses[keyof UserProfileResponses];
+export type DeleteEngineResponse = DeleteEngineResponses[keyof DeleteEngineResponses];
 
 export type GetEngineByNameData = {
     body?: never;
@@ -1305,83 +1313,35 @@ export type GetEngineByNameResponses = {
 
 export type GetEngineByNameResponse = GetEngineByNameResponses[keyof GetEngineByNameResponses];
 
-export type ListRunnersData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/runners';
-};
-
-export type ListRunnersResponses = {
-    /**
-     * Response List Runners
-     *
-     * Successful Response
-     */
-    200: Array<RunnerOut>;
-};
-
-export type ListRunnersResponse = ListRunnersResponses[keyof ListRunnersResponses];
-
-export type GetRunnerData = {
+export type UserProfileData = {
     body?: never;
     path: {
         /**
-         * Runner Id
+         * Login
          */
-        runner_id: string;
+        login: string;
     };
     query?: never;
-    url: '/runner/{runner_id}';
+    url: '/user/{login}';
 };
 
-export type GetRunnerErrors = {
+export type UserProfileErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type GetRunnerError = GetRunnerErrors[keyof GetRunnerErrors];
+export type UserProfileError = UserProfileErrors[keyof UserProfileErrors];
 
-export type GetRunnerResponses = {
+export type UserProfileResponses = {
     /**
      * Successful Response
      */
-    200: RunnerOut;
+    200: UserProfileOut;
 };
 
-export type GetRunnerResponse = GetRunnerResponses[keyof GetRunnerResponses];
-
-export type UpdateRunnerData = {
-    body: RunnerUpdateRequest;
-    path: {
-        /**
-         * Runner Id
-         */
-        runner_id: string;
-    };
-    query?: never;
-    url: '/runner/{runner_id}';
-};
-
-export type UpdateRunnerErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type UpdateRunnerError = UpdateRunnerErrors[keyof UpdateRunnerErrors];
-
-export type UpdateRunnerResponses = {
-    /**
-     * Successful Response
-     */
-    200: RunnerOut;
-};
-
-export type UpdateRunnerResponse = UpdateRunnerResponses[keyof UpdateRunnerResponses];
+export type UserProfileResponse = UserProfileResponses[keyof UserProfileResponses];
 
 export type ListGamesData = {
     body?: never;
@@ -1503,6 +1463,84 @@ export type GetGameResponses = {
 };
 
 export type GetGameResponse = GetGameResponses[keyof GetGameResponses];
+
+export type ListRunnersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/runners';
+};
+
+export type ListRunnersResponses = {
+    /**
+     * Response List Runners
+     *
+     * Successful Response
+     */
+    200: Array<RunnerOut>;
+};
+
+export type ListRunnersResponse = ListRunnersResponses[keyof ListRunnersResponses];
+
+export type GetRunnerData = {
+    body?: never;
+    path: {
+        /**
+         * Runner Id
+         */
+        runner_id: string;
+    };
+    query?: never;
+    url: '/runner/{runner_id}';
+};
+
+export type GetRunnerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetRunnerError = GetRunnerErrors[keyof GetRunnerErrors];
+
+export type GetRunnerResponses = {
+    /**
+     * Successful Response
+     */
+    200: RunnerOut;
+};
+
+export type GetRunnerResponse = GetRunnerResponses[keyof GetRunnerResponses];
+
+export type UpdateRunnerData = {
+    body: RunnerUpdateRequest;
+    path: {
+        /**
+         * Runner Id
+         */
+        runner_id: string;
+    };
+    query?: never;
+    url: '/runner/{runner_id}';
+};
+
+export type UpdateRunnerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateRunnerError = UpdateRunnerErrors[keyof UpdateRunnerErrors];
+
+export type UpdateRunnerResponses = {
+    /**
+     * Successful Response
+     */
+    200: RunnerOut;
+};
+
+export type UpdateRunnerResponse = UpdateRunnerResponses[keyof UpdateRunnerResponses];
 
 export type ListTournamentsData = {
     body?: never;

@@ -302,7 +302,7 @@
     "/engine": {
       "get": {
         "tags": [
-          "Engines & profiles"
+          "Engines"
         ],
         "summary": "List Engines",
         "operationId": "list_engines",
@@ -327,7 +327,7 @@
     "/engine/register": {
       "post": {
         "tags": [
-          "Engines & profiles"
+          "Engines"
         ],
         "summary": "Register Engine",
         "description": "Record an engine version after the CLI pushed its image to the registry.",
@@ -366,53 +366,10 @@
         }
       }
     },
-    "/user/{login}": {
-      "get": {
-        "tags": [
-          "Engines & profiles"
-        ],
-        "summary": "User Profile",
-        "description": "Public profile: the user, their engines, and those engines' games.",
-        "operationId": "user_profile",
-        "parameters": [
-          {
-            "name": "login",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Login"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserProfileOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/user/{login}/{engine_name}": {
       "get": {
         "tags": [
-          "Engines & profiles"
+          "Engines"
         ],
         "summary": "Get Engine By Name",
         "description": "Engine detail addressed GitHub-style: owner handle + engine name.",
@@ -459,51 +416,31 @@
             }
           }
         }
-      }
-    },
-    "/runners": {
-      "get": {
+      },
+      "delete": {
         "tags": [
-          "Games & runners"
+          "Engines"
         ],
-        "summary": "List Runners",
-        "description": "All registered runners, durable metadata joined with live online status.",
-        "operationId": "list_runners",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/RunnerOut"
-                  },
-                  "type": "array",
-                  "title": "Response List Runners"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/runner/{runner_id}": {
-      "get": {
-        "tags": [
-          "Games & runners"
-        ],
-        "summary": "Get Runner",
-        "description": "One runner's durable metadata joined with its live online status.",
-        "operationId": "get_runner",
+        "summary": "Delete Engine",
+        "description": "Delete an engine, its versions, and its registry images (owner/admin).",
+        "operationId": "delete_engine",
         "parameters": [
           {
-            "name": "runner_id",
+            "name": "login",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid",
-              "title": "Runner Id"
+              "title": "Login"
+            }
+          },
+          {
+            "name": "engine_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Engine Name"
             }
           }
         ],
@@ -513,7 +450,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunnerOut"
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Delete Engine"
                 }
               }
             }
@@ -529,43 +470,34 @@
             }
           }
         }
-      },
-      "patch": {
+      }
+    },
+    "/user/{login}": {
+      "get": {
         "tags": [
-          "Games & runners"
+          "Profiles"
         ],
-        "summary": "Update Runner",
-        "description": "Edit a runner's name/description (owner only).",
-        "operationId": "update_runner",
+        "summary": "User Profile",
+        "description": "Public profile: the user, their engines, and those engines' games.",
+        "operationId": "user_profile",
         "parameters": [
           {
-            "name": "runner_id",
+            "name": "login",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid",
-              "title": "Runner Id"
+              "title": "Login"
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RunnerUpdateRequest"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunnerOut"
+                  "$ref": "#/components/schemas/UserProfileOut"
                 }
               }
             }
@@ -586,7 +518,7 @@
     "/game": {
       "post": {
         "tags": [
-          "Games & runners"
+          "Games"
         ],
         "summary": "Start Game",
         "operationId": "start_game",
@@ -625,7 +557,7 @@
       },
       "get": {
         "tags": [
-          "Games & runners"
+          "Games"
         ],
         "summary": "List Games",
         "operationId": "list_games",
@@ -674,7 +606,7 @@
     "/game/{game_id}/cancel": {
       "post": {
         "tags": [
-          "Games & runners"
+          "Games"
         ],
         "summary": "Cancel Game",
         "description": "Stop a running game: aborts it and kills its engine containers.",
@@ -722,7 +654,7 @@
     "/game/{game_id}": {
       "get": {
         "tags": [
-          "Games & runners"
+          "Games"
         ],
         "summary": "Get Game",
         "operationId": "get_game",
@@ -745,6 +677,128 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GameOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runners": {
+      "get": {
+        "tags": [
+          "Runners"
+        ],
+        "summary": "List Runners",
+        "description": "All registered runners, durable metadata joined with live online status.",
+        "operationId": "list_runners",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunnerOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Runners"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runner/{runner_id}": {
+      "get": {
+        "tags": [
+          "Runners"
+        ],
+        "summary": "Get Runner",
+        "description": "One runner's durable metadata joined with its live online status.",
+        "operationId": "get_runner",
+        "parameters": [
+          {
+            "name": "runner_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Runner Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunnerOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Runners"
+        ],
+        "summary": "Update Runner",
+        "description": "Edit a runner's name/description (owner only).",
+        "operationId": "update_runner",
+        "parameters": [
+          {
+            "name": "runner_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Runner Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunnerUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunnerOut"
                 }
               }
             }
@@ -2726,12 +2780,20 @@
       "description": "GitHub OAuth login, the logged-in account, session and CLI tokens, and the Docker registry token endpoint."
     },
     {
-      "name": "Engines & profiles",
-      "description": "Public user profiles and the engines they've uploaded."
+      "name": "Engines",
+      "description": "The engine catalog: uploaded engines, their image versions, registration from the CLI, and deletion."
     },
     {
-      "name": "Games & runners",
-      "description": "Start games, browse results, and see the connected runners that play them."
+      "name": "Profiles",
+      "description": "Public user profiles."
+    },
+    {
+      "name": "Runners",
+      "description": "The machines that play games: registered runners with their hardware and live online status."
+    },
+    {
+      "name": "Games",
+      "description": "Start games and browse live or finished ones."
     },
     {
       "name": "Tournaments",
