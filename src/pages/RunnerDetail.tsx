@@ -1,7 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
-import { fetchRunner, profileUrl, updateRunner } from '../api'
-import { Hint, InlineEdit, Meter, Section, StatusDot } from '../components'
+import { fetchRunner, isNotFound, profileUrl, updateRunner } from '../api'
+import {
+  Hint,
+  InlineEdit,
+  LoadError,
+  Meter,
+  Section,
+  StatusDot,
+} from '../components'
 import { useAuth } from '../auth-context'
 import { useRunnerStream } from '../useRunnerStream'
 import { formatBytes, relativeTime } from '../format'
@@ -12,7 +19,11 @@ export default function RunnerDetail() {
   const { id = '' } = useParams()
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const { data: runner, error } = useQuery({
+  const {
+    data: runner,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['runner', id],
     queryFn: () => fetchRunner(id),
     staleTime: 5_000,
@@ -29,7 +40,15 @@ export default function RunnerDetail() {
   }
 
   if (error) {
-    return <NotFound />
+    return isNotFound(error) ? (
+      <NotFound />
+    ) : (
+      <LoadError
+        what="this runner"
+        error={error}
+        onRetry={() => void refetch()}
+      />
+    )
   }
   if (!runner) {
     return (

@@ -5,12 +5,20 @@ import {
   deleteEngine,
   engineUrl,
   fetchEngineByName,
+  isNotFound,
   profileUrl,
   updateEngine,
   type EngineUpdateRequest,
 } from '../api'
 import { useAuth } from '../auth-context'
-import { GameList, Hint, InlineEdit, Section, TagPills } from '../components'
+import {
+  GameList,
+  Hint,
+  InlineEdit,
+  LoadError,
+  Section,
+  TagPills,
+} from '../components'
 import { formatBytes } from '../format'
 import NotFound from './NotFound'
 
@@ -74,7 +82,11 @@ export default function EngineDetail() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { data: engine, error } = useQuery({
+  const {
+    data: engine,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['engine', login, engineName],
     queryFn: () => fetchEngineByName(login, engineName),
   })
@@ -91,7 +103,15 @@ export default function EngineDetail() {
   }
 
   if (error) {
-    return <NotFound />
+    return isNotFound(error) ? (
+      <NotFound />
+    ) : (
+      <LoadError
+        what="this engine"
+        error={error}
+        onRetry={() => void refetch()}
+      />
+    )
   }
   if (!engine) {
     return (

@@ -7,8 +7,10 @@ import {
 import { Link } from 'react-router'
 import { Chessground } from './Chessground'
 import {
+  ApiError,
   engineUrl,
   gameUrl,
+  isUnreachable,
   runnerUrl,
   tournamentUrl,
   type Engine,
@@ -40,6 +42,46 @@ export function Section({
 /** Muted one-liner for loading / empty states. */
 export function Hint({ children }: { children: ReactNode }) {
   return <p className="text-neutral-500 text-sm italic">{children}</p>
+}
+
+/** Full-page "we couldn't load this" state. Distinct from NotFound, which
+    means the backend said the thing doesn't exist — this one means we never
+    got an answer we could trust. */
+export function LoadError({
+  what,
+  error,
+  onRetry,
+}: {
+  what: string
+  error: unknown
+  onRetry?: () => void
+}) {
+  const status = error instanceof ApiError ? error.status : null
+  const detail = isUnreachable(error)
+    ? 'the API is unreachable — the backend is probably down.'
+    : status !== null
+      ? `the API answered ${status}.`
+      : 'something went wrong.'
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-16 flex flex-col items-center gap-3 text-center">
+      <p className="text-xl font-semibold text-neutral-100">
+        couldn't load {what}
+      </p>
+      <p className="text-neutral-400 text-sm">{detail}</p>
+      {error instanceof Error && !isUnreachable(error) && (
+        <p className="text-neutral-600 text-xs font-mono">{error.message}</p>
+      )}
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="text-xs px-2 py-0.5 rounded border border-neutral-700 text-neutral-400 hover:bg-neutral-800 transition-colors"
+        >
+          try again
+        </button>
+      )}
+    </div>
+  )
 }
 
 export function PrimaryButton({

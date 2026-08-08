@@ -5,6 +5,7 @@ import {
   createCliToken,
   fetchTokens,
   fetchUserProfile,
+  isNotFound,
   revokeToken,
   type ApiToken,
 } from '../api'
@@ -14,6 +15,7 @@ import {
   FreshToken,
   GameList,
   Hint,
+  LoadError,
   PrimaryButton,
   Section,
 } from '../components'
@@ -116,13 +118,25 @@ function TokenSection() {
 export default function UserProfile() {
   const { login = '' } = useParams()
   const { user } = useAuth()
-  const { data: profile, error } = useQuery({
+  const {
+    data: profile,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['profile', login],
     queryFn: () => fetchUserProfile(login),
   })
 
   if (error) {
-    return <NotFound />
+    return isNotFound(error) ? (
+      <NotFound />
+    ) : (
+      <LoadError
+        what="this profile"
+        error={error}
+        onRetry={() => void refetch()}
+      />
+    )
   }
   if (profile === undefined) {
     return (

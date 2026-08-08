@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelTournament,
   fetchTournament,
+  isNotFound,
   liveStreamUrl,
   profileUrl,
   runnerUrl,
@@ -15,6 +16,7 @@ import {
   GameList,
   Hint,
   LiveGameGrid,
+  LoadError,
   Section,
   TournamentStatusPill,
 } from '../components'
@@ -134,7 +136,11 @@ export default function TournamentDetail() {
   const { id = '' } = useParams()
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const { data: t, error } = useQuery({
+  const {
+    data: t,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['tournament', id],
     queryFn: () => fetchTournament(id),
     // Poll while running so standings + newly-dispatched pairings show up.
@@ -162,7 +168,17 @@ export default function TournamentDetail() {
     return () => es.close()
   }, [queryClient, id])
 
-  if (error) return <NotFound />
+  if (error) {
+    return isNotFound(error) ? (
+      <NotFound />
+    ) : (
+      <LoadError
+        what="this tournament"
+        error={error}
+        onRetry={() => void refetch()}
+      />
+    )
+  }
   if (!t) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-10">

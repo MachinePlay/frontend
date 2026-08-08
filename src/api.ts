@@ -25,6 +25,7 @@ import type {
 export const API_URL = import.meta.env.VITE_API_URL as string
 
 export class ApiError extends Error {
+  /** HTTP status, or 0 when the request never got an answer at all. */
   readonly status: number
 
   constructor(message: string, status: number) {
@@ -33,9 +34,27 @@ export class ApiError extends Error {
   }
 }
 
+/** True only when the backend positively answered "no such thing". A dead
+    backend or a 500 is *not* a 404 — pages must not show "page doesn't
+    exist" for those. */
+export const isNotFound = (error: unknown): boolean =>
+  error instanceof ApiError && error.status === 404
+
+/** True when the request never reached the backend (down, DNS, CORS, offline). */
+export const isUnreachable = (error: unknown): boolean =>
+  error instanceof ApiError && error.status === 0
+
 // Fetch + json with the backend's error envelope surfaced as the message.
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(`${API_URL}${path}`, init)
+  let r: Response
+  try {
+    r = await fetch(`${API_URL}${path}`, init)
+  } catch {
+    // fetch only rejects when there was no HTTP response: the API is down,
+    // unresolvable, or blocked by CORS. Status 0 marks that apart from a
+    // real HTTP error so callers don't mistake it for "not found".
+    throw new ApiError(`could not reach the API at ${API_URL}`, 0)
+  }
   if (!r.ok) {
     let message = `${init?.method ?? 'GET'} ${path} failed: ${r.status}`
     try {
