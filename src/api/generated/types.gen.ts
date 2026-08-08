@@ -43,6 +43,10 @@ export type EngineDetailOut = {
      */
     description: string;
     /**
+     * Tags
+     */
+    tags: Array<string>;
+    /**
      * Owner Login
      */
     owner_login: string;
@@ -76,6 +80,10 @@ export type EngineOut = {
      * Description
      */
     description: string;
+    /**
+     * Tags
+     */
+    tags: Array<string>;
     /**
      * Owner Login
      */
@@ -136,6 +144,24 @@ export type EngineRegisterResponse = {
      * Url
      */
     url: string;
+};
+
+/**
+ * EngineUpdateRequest
+ */
+export type EngineUpdateRequest = {
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Tags
+     */
+    tags?: Array<string> | null;
 };
 
 /**
@@ -1312,6 +1338,40 @@ export type GetEngineByNameResponses = {
 };
 
 export type GetEngineByNameResponse = GetEngineByNameResponses[keyof GetEngineByNameResponses];
+
+export type UpdateEngineData = {
+    body: EngineUpdateRequest;
+    path: {
+        /**
+         * Login
+         */
+        login: string;
+        /**
+         * Engine Name
+         */
+        engine_name: string;
+    };
+    query?: never;
+    url: '/user/{login}/{engine_name}';
+};
+
+export type UpdateEngineErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateEngineError = UpdateEngineErrors[keyof UpdateEngineErrors];
+
+export type UpdateEngineResponses = {
+    /**
+     * Successful Response
+     */
+    200: EngineDetailOut;
+};
+
+export type UpdateEngineResponse = UpdateEngineResponses[keyof UpdateEngineResponses];
 
 export type UserProfileData = {
     body?: never;

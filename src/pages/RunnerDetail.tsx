@@ -1,83 +1,32 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
-import { fetchRunner, profileUrl, updateRunner, type Runner } from '../api'
-import { Hint, Meter, PrimaryButton, Section, StatusDot } from '../components'
+import { fetchRunner, profileUrl, updateRunner } from '../api'
+import { Hint, InlineEdit, Meter, Section, StatusDot } from '../components'
 import { useAuth } from '../auth-context'
 import { useRunnerStream } from '../useRunnerStream'
 import { formatBytes, relativeTime } from '../format'
 import NotFound from './NotFound'
 
-const fieldClass =
-  'bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-sm'
-
-// Owner-only editor for a runner's name + description. Keyed on the runner id by
-// the caller so switching runners reseeds the fields.
-function RunnerEditor({ runner }: { runner: Runner }) {
-  const queryClient = useQueryClient()
-  const [name, setName] = useState(runner.name)
-  const [description, setDescription] = useState(runner.description)
-
-  const save = useMutation({
-    mutationFn: () =>
-      updateRunner(runner.runner_id, { name, description }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['runner', runner.runner_id] })
-      await queryClient.invalidateQueries({ queryKey: ['runners'] })
-    },
-  })
-
-  const dirty = name !== runner.name || description !== runner.description
-
-  return (
-    <Section title="edit">
-      <div className="flex flex-col gap-2 max-w-xl">
-        <label className="flex items-center gap-2">
-          <span className="text-neutral-400 w-20 text-sm">name</span>
-          <input
-            className={`${fieldClass} flex-1 min-w-0`}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </label>
-        <label className="flex items-start gap-2">
-          <span className="text-neutral-400 w-20 text-sm pt-1">description</span>
-          <textarea
-            className={`${fieldClass} flex-1 min-w-0 resize-y`}
-            rows={3}
-            value={description}
-            placeholder="describe this runner"
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </label>
-        <div className="flex items-center gap-3 sm:pl-[5.5rem]">
-          <PrimaryButton
-            onClick={() => save.mutate()}
-            disabled={!dirty || save.isPending}
-          >
-            {save.isPending ? 'saving…' : 'save'}
-          </PrimaryButton>
-          {save.isError && (
-            <span className="text-red-400 text-xs">
-              {save.error instanceof Error ? save.error.message : 'save failed'}
-            </span>
-          )}
-        </div>
-      </div>
-    </Section>
-  )
-}
-
 // Mounted at /runners/:id.
 export default function RunnerDetail() {
   const { id = '' } = useParams()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const { data: runner, error } = useQuery({
     queryKey: ['runner', id],
     queryFn: () => fetchRunner(id),
     staleTime: 5_000,
   })
   const liveMap = useRunnerStream()
+
+  // Owner-only edits; the patched runner lands in the cache directly so the
+  // field stops flickering back to its old value while the refetch is in
+  // flight. The list view is only invalidated.
+  const patch = async (body: { name?: string; description?: string }) => {
+    const updated = await updateRunner(id, body)
+    queryClient.setQueryData(['runner', id], updated)
+    await queryClient.invalidateQueries({ queryKey: ['runners'] })
+  }
 
   if (error) {
     return <NotFound />
@@ -103,7 +52,15 @@ export default function RunnerDetail() {
       <div className="flex flex-col gap-1">
         <h1 className="flex items-center gap-2 text-xl font-semibold text-neutral-100">
           <StatusDot online={online} />
-          {runner.name}
+          <InlineEdit
+            editable={isOwner}
+            value={runner.name}
+            label="edit name"
+            inputClass="w-56"
+            onSave={(name) => patch({ name })}
+          >
+            <span>{runner.name}</span>
+          </InlineEdit>
         </h1>
         <p className="text-sm text-neutral-400">
           owned by{' '}
@@ -114,8 +71,24 @@ export default function RunnerDetail() {
             {runner.owner_login}
           </Link>
         </p>
-        {runner.description && (
-          <p className="text-neutral-400 text-sm mt-1">{runner.description}</p>
+        {(runner.description || isOwner) && (
+          <div className="mt-1 text-neutral-400 text-sm">
+            <InlineEdit
+              editable={isOwner}
+              value={runner.description}
+              label="edit description"
+              multiline
+              placeholder="describe this runner"
+              hint="⌘/ctrl+enter to save"
+              onSave={(description) => patch({ description })}
+            >
+              <span
+                className={runner.description ? '' : 'text-neutral-600 italic'}
+              >
+                {runner.description || 'add a description'}
+              </span>
+            </InlineEdit>
+          </div>
         )}
       </div>
 
@@ -175,8 +148,6 @@ export default function RunnerDetail() {
           <Hint>offline</Hint>
         )}
       </Section>
-
-      {isOwner && <RunnerEditor key={runner.runner_id} runner={runner} />}
     </div>
   )
 }

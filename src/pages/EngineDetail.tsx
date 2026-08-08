@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router'
-import { deleteEngine, fetchEngineByName, profileUrl } from '../api'
+import {
+  deleteEngine,
+  engineUrl,
+  fetchEngineByName,
+  profileUrl,
+  updateEngine,
+  type EngineUpdateRequest,
+} from '../api'
 import { useAuth } from '../auth-context'
-import { GameList, Hint, Section } from '../components'
+import { GameList, Hint, InlineEdit, Section, TagPills } from '../components'
 import { formatBytes } from '../format'
 import NotFound from './NotFound'
 
@@ -56,14 +63,32 @@ function DeleteEngineButton({ login, name }: { login: string; name: string }) {
   )
 }
 
+// Tags are edited as one comma- (or space-) separated line; the backend
+// lowercases, de-duplicates and validates what comes back.
+const parseTags = (raw: string): string[] =>
+  raw.split(/[,\s]+/).filter(Boolean)
+
 // Mounted at /{login}/{engineName}, GitHub-style.
 export default function EngineDetail() {
   const { login = '', engineName = '' } = useParams()
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { data: engine, error } = useQuery({
     queryKey: ['engine', login, engineName],
     queryFn: () => fetchEngineByName(login, engineName),
   })
+
+  // Owner/admin edits. A rename moves the engine's URL, so seed the cache under
+  // the new key and replace the current history entry with it.
+  const patch = async (body: EngineUpdateRequest) => {
+    const updated = await updateEngine(login, engineName, body)
+    queryClient.setQueryData(['engine', login, updated.name], updated)
+    await queryClient.invalidateQueries({ queryKey: ['engines'] })
+    if (updated.name !== engineName) {
+      void navigate(engineUrl(updated), { replace: true })
+    }
+  }
 
   if (error) {
     return <NotFound />
@@ -75,6 +100,8 @@ export default function EngineDetail() {
       </div>
     )
   }
+
+  const canEdit = user?.login === engine.owner_login || (user?.is_admin ?? false)
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-5">
@@ -88,14 +115,57 @@ export default function EngineDetail() {
               {engine.owner_login}
             </Link>
             <span className="text-neutral-600"> / </span>
-            {engine.name}
+            <InlineEdit
+              editable={canEdit}
+              value={engine.name}
+              label="edit name"
+              inputClass="w-56"
+              onSave={(name) => patch({ name })}
+            >
+              <span>{engine.name}</span>
+            </InlineEdit>
           </h1>
-          {(user?.login === engine.owner_login || user?.is_admin) && (
+          {canEdit && (
             <DeleteEngineButton login={engine.owner_login} name={engine.name} />
           )}
         </div>
-        {engine.description && (
-          <p className="text-neutral-400 text-sm">{engine.description}</p>
+        {(engine.description || canEdit) && (
+          <div className="text-neutral-400 text-sm">
+            <InlineEdit
+              editable={canEdit}
+              value={engine.description}
+              label="edit description"
+              multiline
+              placeholder="what does this engine do?"
+              hint="⌘/ctrl+enter to save"
+              onSave={(description) => patch({ description })}
+            >
+              <span
+                className={engine.description ? '' : 'text-neutral-600 italic'}
+              >
+                {engine.description || 'add a description'}
+              </span>
+            </InlineEdit>
+          </div>
+        )}
+        {(engine.tags.length > 0 || canEdit) && (
+          <div className="mt-1.5">
+            <InlineEdit
+              editable={canEdit}
+              value={engine.tags.join(', ')}
+              label="edit tags"
+              inputClass="w-80"
+              placeholder="python, mcts, rust"
+              hint="comma-separated"
+              onSave={(raw) => patch({ tags: parseTags(raw) })}
+            >
+              {engine.tags.length > 0 ? (
+                <TagPills tags={engine.tags} />
+              ) : (
+                <span className="text-neutral-600 italic text-sm">add tags</span>
+              )}
+            </InlineEdit>
+          </div>
         )}
       </div>
 

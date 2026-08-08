@@ -417,6 +417,66 @@
           }
         }
       },
+      "patch": {
+        "tags": [
+          "Engines"
+        ],
+        "summary": "Update Engine",
+        "description": "Edit an engine's name/description/tags (owner or admin).",
+        "operationId": "update_engine",
+        "parameters": [
+          {
+            "name": "login",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Login"
+            }
+          },
+          {
+            "name": "engine_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Engine Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EngineUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngineDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "Engines"
@@ -1215,6 +1275,13 @@
             "type": "string",
             "title": "Description"
           },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
           "owner_login": {
             "type": "string",
             "title": "Owner Login"
@@ -1244,6 +1311,7 @@
           "id",
           "name",
           "description",
+          "tags",
           "owner_login",
           "created_at",
           "versions",
@@ -1266,6 +1334,13 @@
             "type": "string",
             "title": "Description"
           },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
           "owner_login": {
             "type": "string",
             "title": "Owner Login"
@@ -1281,6 +1356,7 @@
           "id",
           "name",
           "description",
+          "tags",
           "owner_login"
         ],
         "title": "EngineOut"
@@ -1351,6 +1427,50 @@
           "url"
         ],
         "title": "EngineRegisterResponse"
+      },
+      "EngineUpdateRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "title": "EngineUpdateRequest"
       },
       "EngineVersionOut": {
         "properties": {

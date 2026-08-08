@@ -1,4 +1,9 @@
-import { useState, type ComponentProps, type ReactNode } from 'react'
+import {
+  useState,
+  type ComponentProps,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { Link } from 'react-router'
 import { Chessground } from './Chessground'
 import {
@@ -51,6 +56,206 @@ export function PrimaryButton({
 
 const cardClass =
   'block border border-neutral-800 hover:border-neutral-600 rounded px-3 py-2 transition-colors'
+
+const iconButtonClass =
+  'inline-flex shrink-0 items-center justify-center rounded p-1 text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800 transition-colors disabled:opacity-40'
+
+const fieldClass =
+  'bg-neutral-900 border border-neutral-800 focus:border-neutral-600 rounded px-2 py-1 text-sm text-neutral-100 outline-none font-normal'
+
+const iconProps = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  className: 'h-3.5 w-3.5',
+} as const
+
+const PencilIcon = () => (
+  <svg {...iconProps}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7.5 18.5 3 20l1.5-4.5Z" />
+  </svg>
+)
+
+const CheckIcon = () => (
+  <svg {...iconProps}>
+    <path d="m5 13 4 4L19 7" />
+  </svg>
+)
+
+const CloseIcon = () => (
+  <svg {...iconProps}>
+    <path d="M18 6 6 18M6 6l12 12" />
+  </svg>
+)
+
+/** Edit-in-place for one field: the value reads as plain text with a pencil
+    beside it, and turns into an input with save/cancel icons on click.
+    `children` is the display rendering (inline content — this sits inside
+    headings and paragraphs); `value` is the raw string being edited. Enter
+    saves (⌘/Ctrl+Enter when `multiline`), Escape cancels. */
+export function InlineEdit({
+  value,
+  onSave,
+  label,
+  editable = false,
+  multiline = false,
+  placeholder,
+  hint,
+  inputClass = '',
+  children,
+}: {
+  value: string
+  onSave: (next: string) => Promise<unknown>
+  label: string
+  editable?: boolean
+  multiline?: boolean
+  placeholder?: string
+  hint?: string
+  inputClass?: string
+  children: ReactNode
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const cancel = () => {
+    setEditing(false)
+    setError(null)
+  }
+
+  const save = async () => {
+    if (draft === value) return cancel()
+    setBusy(true)
+    try {
+      await onSave(draft)
+      setEditing(false)
+      setError(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onKeyDown = (e: ReactKeyboardEvent) => {
+    if (e.key === 'Escape') cancel()
+    else if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      void save()
+    }
+  }
+
+  if (!editable) return <>{children}</>
+
+  if (!editing) {
+    return (
+      <span
+        className={`inline-flex gap-1 ${multiline ? 'items-start' : 'items-center'}`}
+      >
+        {children}
+        <button
+          type="button"
+          aria-label={label}
+          title={label}
+          onClick={() => {
+            setDraft(value)
+            setError(null)
+            setEditing(true)
+          }}
+          className={iconButtonClass}
+        >
+          <PencilIcon />
+        </button>
+      </span>
+    )
+  }
+
+  // The field stays enabled while saving: disabling it blurs the element, so a
+  // rejected save would leave the caret (and Escape) nowhere.
+  const field = multiline ? (
+    <textarea
+      autoFocus
+      rows={3}
+      value={draft}
+      placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={onKeyDown}
+      className={`${fieldClass} w-full resize-y ${inputClass}`}
+    />
+  ) : (
+    <input
+      autoFocus
+      value={draft}
+      placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={onKeyDown}
+      className={`${fieldClass} ${inputClass}`}
+    />
+  )
+
+  const actions = (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      <button
+        type="button"
+        aria-label="save"
+        title="save"
+        disabled={busy}
+        onClick={() => void save()}
+        className={`${iconButtonClass} hover:text-green-400`}
+      >
+        <CheckIcon />
+      </button>
+      <button
+        type="button"
+        aria-label="cancel"
+        title="cancel"
+        disabled={busy}
+        onClick={cancel}
+        className={`${iconButtonClass} hover:text-red-400`}
+      >
+        <CloseIcon />
+      </button>
+      {error ? (
+        <span className="text-red-400 text-xs font-normal">{error}</span>
+      ) : (
+        hint && <span className="text-neutral-600 text-xs font-normal">{hint}</span>
+      )}
+    </span>
+  )
+
+  return multiline ? (
+    <span className="flex flex-col items-start gap-1 w-full max-w-xl">
+      {field}
+      {actions}
+    </span>
+  ) : (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      {field}
+      {actions}
+    </span>
+  )
+}
+
+/** Keyword pills — an engine's tags. */
+export function TagPills({ tags }: { tags: string[] }) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="rounded-full border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-400"
+        >
+          {tag}
+        </span>
+      ))}
+    </span>
+  )
+}
 
 export function GameRow({ game }: { game: Game }) {
   // fastchess reports "normal" for a plain finish — noise, hide it.
@@ -154,6 +359,11 @@ export function EngineRow({ engine }: { engine: Engine }) {
       {engine.description && (
         <div className="text-xs text-neutral-500 mt-0.5">
           {engine.description}
+        </div>
+      )}
+      {engine.tags.length > 0 && (
+        <div className="mt-1.5">
+          <TagPills tags={engine.tags} />
         </div>
       )}
     </Link>

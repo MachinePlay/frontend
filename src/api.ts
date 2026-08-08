@@ -2,6 +2,7 @@ import type {
   ApiTokenOut,
   EngineDetailOut,
   EngineOut,
+  EngineUpdateRequest,
   EngineVersionOut,
   GameOut,
   HardwareInfo,
@@ -86,6 +87,21 @@ export const fetchEngineByName = (
   name: string,
 ): Promise<EngineDetail> =>
   request(`/user/${encodeURIComponent(login)}/${encodeURIComponent(name)}`)
+
+// Edit an engine's owner-managed metadata (owner/admin only). Omitted fields
+// are left unchanged; `tags` replaces the whole list. A rename moves the
+// engine's URL, so callers should navigate to the returned name.
+export const updateEngine = (
+  login: string,
+  name: string,
+  patch: EngineUpdateRequest,
+): Promise<EngineDetail> =>
+  request(`/user/${encodeURIComponent(login)}/${encodeURIComponent(name)}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  })
 
 // Delete an engine, its versions, and its registry images (owner/admin only).
 // Refused with a 409 while the engine has games pending or playing.
@@ -215,6 +231,7 @@ export type TournamentParticipant = TournamentParticipantOut
 export type Standing = StandingRow
 
 export type {
+  EngineUpdateRequest,
   GameStatus,
   LiveStreamEvent,
   TournamentCreateRequest,
