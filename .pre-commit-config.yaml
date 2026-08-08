@@ -1,0 +1,33 @@
+# See https://pre-commit.com for more information
+#
+# The sibling backend/ and machineplay/ repos install the hook with
+# `uv run pre-commit install`, which points the generated hook at that repo's
+# own .venv. There is no Python project here, so install pre-commit once as a
+# persistent uv tool instead — `uv tool install pre-commit` puts it in
+# ~/.local/bin (on PATH), which the generated hook falls back to. Don't use
+# `uvx pre-commit install`: that hook points into the uv *cache*, which is
+# GC-able, and it dies with "`pre-commit` not found" once the entry is evicted.
+#
+# Both hooks run the whole project rather than the staged files: eslint is
+# configured as `eslint .`, and `tsc -b` typechecks by tsconfig project, not by
+# file list. Hence pass_filenames: false.
+
+repos:
+- repo: local
+  hooks:
+    - id: eslint
+      name: eslint
+      entry: pnpm lint
+      language: system
+      types_or: [ts, tsx, javascript, jsx]
+      pass_filenames: false
+
+    - id: tsc
+      name: tsc (typecheck)
+      # The `tsc -b` half of `pnpm build`, without the vite bundle — this is
+      # what catches an API-shape change that the generated types made
+      # nullable, which eslint alone will not.
+      entry: pnpm exec tsc -b
+      language: system
+      types_or: [ts, tsx, javascript, jsx, json]
+      pass_filenames: false
