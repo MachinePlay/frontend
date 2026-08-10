@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createCliToken,
+  deleteAccount,
+  DELETED_LOGIN,
   fetchTokens,
   fetchUserProfile,
   isNotFound,
@@ -115,6 +117,74 @@ function TokenSection() {
   )
 }
 
+/** Account deletion, gated on typing the handle out. Deliberately heavier than
+    the two-click ConfirmButton used for engines: this one ends every game and
+    tournament the account has running and can't be undone. */
+function DangerZone({ login }: { login: string }) {
+  const navigate = useNavigate()
+  const { setUser } = useAuth()
+  const [typed, setTyped] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const armed = typed.trim().toLowerCase() === login.toLowerCase()
+
+  const run = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await deleteAccount(typed.trim())
+      // The backend cleared the session cookie; drop the client's copy of the
+      // user too, so the header stops offering a profile that no longer exists.
+      setUser(null)
+      void navigate('/', { replace: true })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Section title="delete account">
+      <div className="flex flex-col gap-3 rounded border border-red-900/60 bg-red-950/20 p-3">
+        <p className="text-neutral-300 text-sm">
+          Deletes your engines, every version you uploaded, their registry
+          images and your runners. Anything still running — games, tournaments —
+          ends immediately. This can't be undone.
+        </p>
+        <p className="text-neutral-500 text-xs">
+          Games and tournaments you already played stay in the public history,
+          credited to <span className="font-mono">{DELETED_LOGIN}</span>. Signing
+          in with GitHub again creates a brand-new account, and the handle{' '}
+          <span className="font-mono">{login}</span> is free for anyone to take.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            placeholder={login}
+            aria-label={`type ${login} to confirm`}
+            className="bg-neutral-900 border border-neutral-800 focus:border-neutral-600 rounded px-2 py-1 text-sm font-mono text-neutral-100 outline-none"
+          />
+          <button
+            type="button"
+            disabled={!armed || busy}
+            onClick={() => void run()}
+            className="rounded border border-red-800 px-3 py-1 text-sm text-red-400 hover:bg-red-950 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+          >
+            {busy ? 'deleting…' : 'delete account'}
+          </button>
+          {!armed && (
+            <span className="text-neutral-600 text-xs">
+              type your handle to enable
+            </span>
+          )}
+        </div>
+        {error && <p className="text-red-400 text-sm">{error}</p>}
+      </div>
+    </Section>
+  )
+}
+
 export default function UserProfile() {
   const { login = '' } = useParams()
   const { user } = useAuth()
@@ -181,6 +251,7 @@ export default function UserProfile() {
       </Section>
 
       {isOwn && <TokenSection />}
+      {isOwn && <DangerZone login={profile.login} />}
     </div>
   )
 }

@@ -100,6 +100,28 @@ export const fetchMe = (): Promise<User | null> =>
 export const logout = (): Promise<unknown> =>
   request('/auth/logout', post())
 
+/** The name public history shows in place of a deleted account's handle. Not a
+    legal handle, so it never collides with a real user — see `DELETED_LOGIN` in
+    the backend's `app/accounts.py`. */
+export const DELETED_LOGIN = '[deleted]'
+
+/** True when a recorded handle belongs to an account that no longer exists, so
+    callers render it as plain text instead of a link to a 404 (or, worse, to
+    whoever registered the freed handle next). */
+export const isDeletedLogin = (login: string): boolean =>
+  login === DELETED_LOGIN
+
+/** Delete the logged-in account. `login` must repeat the account's own handle.
+    Engines, uploaded versions and registry images go; live games and
+    tournaments end immediately; played history stays. */
+export const deleteAccount = (login: string): Promise<unknown> =>
+  request('/me', {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login }),
+  })
+
 export const fetchEngines = (): Promise<Engine[]> => request('/engine')
 
 export const fetchEngineByName = (

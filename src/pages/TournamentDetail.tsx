@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelTournament,
   fetchTournament,
+  isDeletedLogin,
   isNotFound,
   liveStreamUrl,
   profileUrl,
@@ -25,6 +26,23 @@ import { applyLiveEvent } from '../live'
 import { computeStandings } from '../standings'
 import { formatLabel, relativeTime } from '../format'
 import NotFound from './NotFound'
+
+/** Who created the tournament. A deleted account is recorded as a neutral
+    label rather than a handle, so it renders as plain text — there is no
+    profile behind it, and the freed handle may belong to someone else now. */
+function Creator({ login }: { login: string }) {
+  if (isDeletedLogin(login)) {
+    return <span className="text-neutral-500">{login}</span>
+  }
+  return (
+    <Link
+      to={profileUrl(login)}
+      className="text-neutral-300 hover:text-neutral-100 transition-colors"
+    >
+      {login}
+    </Link>
+  )
+}
 
 function StandingsTable({
   standings,
@@ -212,13 +230,7 @@ export default function TournamentDetail() {
             >
               runner
             </Link>{' '}
-            · by{' '}
-            <Link
-              to={profileUrl(t.created_by)}
-              className="text-neutral-300 hover:text-neutral-100 transition-colors"
-            >
-              {t.created_by}
-            </Link>
+            · by <Creator login={t.created_by} />
           </p>
         </div>
         {canCancel && (
