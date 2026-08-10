@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useState,
   type ComponentProps,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -93,6 +94,63 @@ export function PrimaryButton({
       {...rest}
       className={`bg-neutral-100 text-neutral-900 rounded px-3 py-1 text-sm disabled:opacity-40 ${className}`}
     />
+  )
+}
+
+/** A destructive action in two clicks: the first arms the button, the second
+    runs it. Failures render beside the button and disarm it, so the backend's
+    refusal ("… games pending or playing") is what the user reads. */
+export function ConfirmButton({
+  label,
+  confirmLabel,
+  busyLabel,
+  onConfirm,
+}: {
+  label: string
+  confirmLabel: string
+  busyLabel: string
+  onConfirm: () => Promise<unknown>
+}) {
+  const [armed, setArmed] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Disarm the confirm step after a moment so a stray click can't linger.
+  useEffect(() => {
+    if (!armed) return
+    const t = setTimeout(() => setArmed(false), 4000)
+    return () => clearTimeout(t)
+  }, [armed])
+
+  const run = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await onConfirm()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+      setArmed(false)
+    }
+  }
+
+  return (
+    <span className="inline-flex items-center gap-2">
+      {error && <span className="text-red-400 text-xs">{error}</span>}
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => (armed ? void run() : setArmed(true))}
+        className={`shrink-0 text-xs px-2 py-0.5 rounded border transition-colors disabled:opacity-40 ${
+          armed
+            ? 'border-red-700 text-red-400 hover:bg-red-950'
+            : 'border-neutral-700 text-neutral-400 hover:bg-neutral-800'
+        }`}
+      >
+        {busy ? busyLabel : armed ? confirmLabel : label}
+      </button>
+    </span>
   )
 }
 
@@ -393,10 +451,16 @@ export function EngineRow({ engine }: { engine: Engine }) {
         <span className="font-medium text-neutral-100">
           {engine.owner_login}/{engine.name}
         </span>
-        <span className="ml-auto text-xs text-neutral-500">
-          {engine.version_count}{' '}
-          {engine.version_count === 1 ? 'version' : 'versions'}
-        </span>
+        {engine.version_count === 0 ? (
+          // Nothing to play: it can't be entered into a game or tournament
+          // until something is uploaded.
+          <span className="ml-auto text-xs text-amber-500/80">no versions</span>
+        ) : (
+          <span className="ml-auto text-xs text-neutral-500">
+            {engine.version_count}{' '}
+            {engine.version_count === 1 ? 'version' : 'versions'}
+          </span>
+        )}
       </div>
       {engine.description && (
         <div className="text-xs text-neutral-500 mt-0.5">

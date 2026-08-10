@@ -195,6 +195,16 @@ export type EngineVersionOut = {
 };
 
 /**
+ * EngineVersionUpdateRequest
+ */
+export type EngineVersionUpdateRequest = {
+    /**
+     * Version
+     */
+    version?: string | null;
+};
+
+/**
  * FenEvent
  */
 export type FenEvent = {
@@ -1372,6 +1382,86 @@ export type UpdateEngineResponses = {
 };
 
 export type UpdateEngineResponse = UpdateEngineResponses[keyof UpdateEngineResponses];
+
+export type DeleteEngineVersionData = {
+    body?: never;
+    path: {
+        /**
+         * Login
+         */
+        login: string;
+        /**
+         * Engine Name
+         */
+        engine_name: string;
+        /**
+         * Version Id
+         */
+        version_id: string;
+    };
+    query?: never;
+    url: '/user/{login}/{engine_name}/version/{version_id}';
+};
+
+export type DeleteEngineVersionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteEngineVersionError = DeleteEngineVersionErrors[keyof DeleteEngineVersionErrors];
+
+export type DeleteEngineVersionResponses = {
+    /**
+     * Response Delete Engine Version
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: boolean;
+    };
+};
+
+export type DeleteEngineVersionResponse = DeleteEngineVersionResponses[keyof DeleteEngineVersionResponses];
+
+export type UpdateEngineVersionData = {
+    body: EngineVersionUpdateRequest;
+    path: {
+        /**
+         * Login
+         */
+        login: string;
+        /**
+         * Engine Name
+         */
+        engine_name: string;
+        /**
+         * Version Id
+         */
+        version_id: string;
+    };
+    query?: never;
+    url: '/user/{login}/{engine_name}/version/{version_id}';
+};
+
+export type UpdateEngineVersionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateEngineVersionError = UpdateEngineVersionErrors[keyof UpdateEngineVersionErrors];
+
+export type UpdateEngineVersionResponses = {
+    /**
+     * Successful Response
+     */
+    200: EngineDetailOut;
+};
+
+export type UpdateEngineVersionResponse = UpdateEngineVersionResponses[keyof UpdateEngineVersionResponses];
 
 export type UserProfileData = {
     body?: never;

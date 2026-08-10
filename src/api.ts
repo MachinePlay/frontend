@@ -4,6 +4,7 @@ import type {
   EngineOut,
   EngineUpdateRequest,
   EngineVersionOut,
+  EngineVersionUpdateRequest,
   GameOut,
   HardwareInfo,
   PendingSignupOut,
@@ -130,6 +131,36 @@ export const deleteEngine = (login: string, name: string): Promise<unknown> =>
     credentials: 'include',
   })
 
+const versionPath = (login: string, name: string, versionId: string): string =>
+  `/user/${encodeURIComponent(login)}/${encodeURIComponent(name)}/version/${versionId}`
+
+// Rename one uploaded version (owner/admin only). Only the label moves —
+// finished games keep the version string they recorded. Returns the engine.
+export const updateEngineVersion = (
+  login: string,
+  name: string,
+  versionId: string,
+  patch: EngineVersionUpdateRequest,
+): Promise<EngineDetail> =>
+  request(versionPath(login, name, versionId), {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  })
+
+// Delete one uploaded version and its registry image (owner/admin only).
+// Refused with a 409 while that version has a game pending or playing.
+export const deleteEngineVersion = (
+  login: string,
+  name: string,
+  versionId: string,
+): Promise<unknown> =>
+  request(versionPath(login, name, versionId), {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+
 export const fetchUserProfile = (login: string): Promise<UserProfile> =>
   request(`/user/${encodeURIComponent(login)}`)
 
@@ -251,6 +282,7 @@ export type Standing = StandingRow
 
 export type {
   EngineUpdateRequest,
+  EngineVersionUpdateRequest,
   GameStatus,
   LiveStreamEvent,
   TournamentCreateRequest,

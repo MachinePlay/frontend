@@ -1,17 +1,20 @@
-import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router'
 import {
   deleteEngine,
+  deleteEngineVersion,
   engineUrl,
   fetchEngineByName,
   isNotFound,
   profileUrl,
   updateEngine,
+  updateEngineVersion,
   type EngineUpdateRequest,
+  type EngineVersion,
 } from '../api'
 import { useAuth } from '../auth-context'
 import {
+  ConfirmButton,
   GameList,
   Hint,
   InlineEdit,
@@ -22,59 +25,55 @@ import {
 import { formatBytes } from '../format'
 import NotFound from './NotFound'
 
-// Owner/admin-only delete with the same arm-then-confirm step as game cancel;
-// lands on the owner's profile once the engine is gone.
-function DeleteEngineButton({ login, name }: { login: string; name: string }) {
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const [armed, setArmed] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  // Disarm the confirm step after a moment so a stray click can't linger.
-  useEffect(() => {
-    if (!armed) return
-    const t = setTimeout(() => setArmed(false), 4000)
-    return () => clearTimeout(t)
-  }, [armed])
-
-  const doDelete = async () => {
-    setBusy(true)
-    setError(null)
-    try {
-      await deleteEngine(login, name)
-      await queryClient.invalidateQueries({ queryKey: ['engines'] })
-      navigate(profileUrl(login))
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-      setBusy(false)
-      setArmed(false)
-    }
-  }
-
-  return (
-    <div className="flex items-center gap-3 ml-auto">
-      {error && <span className="text-red-400 text-xs">{error}</span>}
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => (armed ? void doDelete() : setArmed(true))}
-        className={`text-xs px-2 py-0.5 rounded border transition-colors disabled:opacity-40 ${
-          armed
-            ? 'border-red-700 text-red-400 hover:bg-red-950'
-            : 'border-neutral-700 text-neutral-400 hover:bg-neutral-800'
-        }`}
-      >
-        {busy ? 'deleting…' : armed ? 'really delete?' : 'delete engine'}
-      </button>
-    </div>
-  )
-}
-
 // Tags are edited as one comma- (or space-) separated line; the backend
 // lowercases, de-duplicates and validates what comes back.
 const parseTags = (raw: string): string[] =>
   raw.split(/[,\s]+/).filter(Boolean)
+
+// One uploaded version. The owner can rename its label — that moves nothing but
+// the label, since the image is pinned by digest — or delete it, which the
+// backend refuses while that exact version has a game pending or playing.
+function VersionRow({
+  version,
+  editable,
+  onRename,
+  onDelete,
+}: {
+  version: EngineVersion
+  editable: boolean
+  onRename: (label: string) => Promise<unknown>
+  onDelete: () => Promise<unknown>
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border border-neutral-800 rounded px-3 py-2 text-sm">
+      <span className="font-mono text-neutral-100">
+        <InlineEdit
+          editable={editable}
+          value={version.version}
+          label="edit version"
+          inputClass="w-44 font-mono"
+          onSave={onRename}
+        >
+          <span>{version.version}</span>
+        </InlineEdit>
+      </span>
+      <span className="ml-auto text-xs text-neutral-500">
+        {formatBytes(version.size_bytes)}
+      </span>
+      <span className="text-xs text-neutral-500">
+        {new Date(version.created_at).toLocaleDateString()}
+      </span>
+      {editable && (
+        <ConfirmButton
+          label="delete"
+          confirmLabel="really delete?"
+          busyLabel="deleting…"
+          onConfirm={onDelete}
+        />
+      )}
+    </div>
+  )
+}
 
 // Mounted at /{login}/{engineName}, GitHub-style.
 export default function EngineDetail() {
@@ -100,6 +99,25 @@ export default function EngineDetail() {
     if (updated.name !== engineName) {
       void navigate(engineUrl(updated), { replace: true })
     }
+  }
+
+  // Version edits stay on this page: only the label moves, so the engine's own
+  // cache entry is replaced with the detail the backend returns.
+  const renameVersion = async (versionId: string, version: string) => {
+    const updated = await updateEngineVersion(login, engineName, versionId, {
+      version,
+    })
+    queryClient.setQueryData(['engine', login, engineName], updated)
+  }
+
+  const removeVersion = async (versionId: string) => {
+    await deleteEngineVersion(login, engineName, versionId)
+    // Refetch before returning so the row is gone by the time the button
+    // stops saying "deleting…"; version_count also shows in engine lists.
+    await queryClient.invalidateQueries({
+      queryKey: ['engine', login, engineName],
+    })
+    await queryClient.invalidateQueries({ queryKey: ['engines'] })
   }
 
   if (error) {
@@ -146,7 +164,18 @@ export default function EngineDetail() {
             </InlineEdit>
           </h1>
           {canEdit && (
-            <DeleteEngineButton login={engine.owner_login} name={engine.name} />
+            <span className="ml-auto">
+              <ConfirmButton
+                label="delete engine"
+                confirmLabel="really delete?"
+                busyLabel="deleting…"
+                onConfirm={async () => {
+                  await deleteEngine(engine.owner_login, engine.name)
+                  await queryClient.invalidateQueries({ queryKey: ['engines'] })
+                  void navigate(profileUrl(engine.owner_login))
+                }}
+              />
+            </span>
           )}
         </div>
         {(engine.description || canEdit) && (
@@ -191,22 +220,20 @@ export default function EngineDetail() {
 
       <Section title="versions">
         {engine.versions.length === 0 ? (
-          <Hint>no versions uploaded</Hint>
+          <p className="text-amber-500/80 text-sm">
+            no versions — this engine can't play until one is pushed with{' '}
+            <code className="font-mono">machineplay upload</code>.
+          </p>
         ) : (
           <div className="flex flex-col gap-1">
             {engine.versions.map((v) => (
-              <div
+              <VersionRow
                 key={v.id}
-                className="flex items-center gap-3 border border-neutral-800 rounded px-3 py-2 text-sm"
-              >
-                <span className="font-mono text-neutral-100">{v.version}</span>
-                <span className="ml-auto text-xs text-neutral-500">
-                  {formatBytes(v.size_bytes)}
-                </span>
-                <span className="text-xs text-neutral-500">
-                  {new Date(v.created_at).toLocaleDateString()}
-                </span>
-              </div>
+                version={v}
+                editable={canEdit}
+                onRename={(label) => renameVersion(v.id, label)}
+                onDelete={() => removeVersion(v.id)}
+              />
             ))}
           </div>
         )}
