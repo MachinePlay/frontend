@@ -27,16 +27,6 @@ export type ApiTokenOut = {
 };
 
 /**
- * DeleteAccountRequest
- */
-export type DeleteAccountRequest = {
-    /**
-     * Login
-     */
-    login: string;
-};
-
-/**
  * EngineDetailOut
  */
 export type EngineDetailOut = {
@@ -1145,20 +1135,11 @@ export type LogoutResponses = {
 export type LogoutResponse = LogoutResponses[keyof LogoutResponses];
 
 export type DeleteAccountData = {
-    body: DeleteAccountRequest;
+    body?: never;
     path?: never;
     query?: never;
     url: '/me';
 };
-
-export type DeleteAccountErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type DeleteAccountError = DeleteAccountErrors[keyof DeleteAccountErrors];
 
 export type DeleteAccountResponses = {
     /**

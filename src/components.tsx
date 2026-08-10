@@ -163,6 +163,105 @@ const iconButtonClass =
 const fieldClass =
   'bg-neutral-900 border border-neutral-800 focus:border-neutral-600 rounded px-2 py-1 text-sm text-neutral-100 outline-none font-normal'
 
+/** A destructive action gated on typing `phrase` back — the heavier sibling of
+    ConfirmButton, for things that can't be undone and take other work with
+    them.
+
+    Collapsed to a quiet button until asked for: `children` is what deleting
+    actually costs, which is worth reading at the moment someone reaches for it
+    and is only noise on the way to anything else. Opening it reveals that
+    explanation plus the confirmation field; failures render below, so the
+    backend's refusal ("… games pending or playing") is what the user reads,
+    with the typed text left alone to retry. */
+export function DangerZone({
+  phrase,
+  label,
+  busyLabel,
+  onConfirm,
+  children,
+}: {
+  phrase: string
+  label: string
+  busyLabel: string
+  onConfirm: () => Promise<unknown>
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  const [typed, setTyped] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const armed = typed.trim().toLowerCase() === phrase.toLowerCase()
+
+  const close = () => {
+    setOpen(false)
+    setTyped('')
+    setError(null)
+  }
+
+  const run = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await onConfirm()
+      // Left busy on purpose: callers navigate away from what they just
+      // deleted, so re-arming the button would only flash it.
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setBusy(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="self-start rounded border border-neutral-700 px-2 py-0.5 text-xs text-neutral-400 hover:border-red-800 hover:text-red-400 transition-colors"
+      >
+        {label}
+      </button>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded border border-red-900/60 bg-red-950/20 p-3">
+      {children}
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          autoFocus
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+          placeholder={phrase}
+          aria-label={`type ${phrase} to confirm`}
+          className={`${fieldClass} font-mono`}
+        />
+        <button
+          type="button"
+          disabled={!armed || busy}
+          onClick={() => void run()}
+          className="rounded border border-red-800 px-3 py-1 text-sm text-red-400 hover:bg-red-950 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+        >
+          {busy ? busyLabel : label}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={close}
+          className="px-2 py-1 text-sm text-neutral-500 hover:text-neutral-200 disabled:opacity-40 transition-colors"
+        >
+          cancel
+        </button>
+        {!armed && (
+          <span className="text-neutral-600 text-xs">
+            type <span className="font-mono">{phrase}</span> to enable
+          </span>
+        )}
+      </div>
+      {error && <p className="text-red-400 text-sm">{error}</p>}
+    </div>
+  )
+}
+
 const iconProps = {
   viewBox: '0 0 24 24',
   fill: 'none',

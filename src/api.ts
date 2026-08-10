@@ -111,16 +111,12 @@ export const DELETED_LOGIN = '[deleted]'
 export const isDeletedLogin = (login: string): boolean =>
   login === DELETED_LOGIN
 
-/** Delete the logged-in account. `login` must repeat the account's own handle.
-    Engines, uploaded versions and registry images go; live games and
-    tournaments end immediately; played history stays. */
-export const deleteAccount = (login: string): Promise<unknown> =>
-  request('/me', {
-    method: 'DELETE',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ login }),
-  })
+/** Delete the logged-in account — whoever the session cookie names, so there is
+    nothing to pass. Engines, uploaded versions and registry images go; live
+    games and tournaments end immediately; played history stays. The typed-handle
+    confirmation is a UI gate (see DangerZone), not part of the request. */
+export const deleteAccount = (): Promise<unknown> =>
+  request('/me', { method: 'DELETE', credentials: 'include' })
 
 export const fetchEngines = (): Promise<Engine[]> => request('/engine')
 

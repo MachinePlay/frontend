@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../auth-context'
 import {
   ConfirmButton,
+  DangerZone,
   GameList,
   Hint,
   InlineEdit,
@@ -110,6 +111,12 @@ export default function EngineDetail() {
     queryClient.setQueryData(['engine', login, engineName], updated)
   }
 
+  const removeEngine = async () => {
+    await deleteEngine(login, engineName)
+    await queryClient.invalidateQueries({ queryKey: ['engines'] })
+    void navigate(profileUrl(login))
+  }
+
   const removeVersion = async (versionId: string) => {
     await deleteEngineVersion(login, engineName, versionId)
     // Refetch before returning so the row is gone by the time the button
@@ -163,20 +170,6 @@ export default function EngineDetail() {
               <span>{engine.name}</span>
             </InlineEdit>
           </h1>
-          {canEdit && (
-            <span className="ml-auto">
-              <ConfirmButton
-                label="delete engine"
-                confirmLabel="really delete?"
-                busyLabel="deleting…"
-                onConfirm={async () => {
-                  await deleteEngine(engine.owner_login, engine.name)
-                  await queryClient.invalidateQueries({ queryKey: ['engines'] })
-                  void navigate(profileUrl(engine.owner_login))
-                }}
-              />
-            </span>
-          )}
         </div>
         {(engine.description || canEdit) && (
           <div className="text-neutral-400 text-sm">
@@ -217,6 +210,31 @@ export default function EngineDetail() {
           </div>
         )}
       </div>
+
+      {canEdit && (
+        <DangerZone
+          phrase={engine.name}
+          label="delete engine"
+          busyLabel="deleting…"
+          onConfirm={removeEngine}
+        >
+          <p className="text-neutral-300 text-sm">
+            Deletes{' '}
+            <span className="font-mono">
+              {engine.owner_login}/{engine.name}
+            </span>
+            , its {engine.versions.length} uploaded{' '}
+            {engine.versions.length === 1 ? 'version' : 'versions'} and their
+            registry images. This can't be undone — re-uploading builds a new
+            engine, not this one.
+          </p>
+          <p className="text-neutral-500 text-xs">
+            Games it already played stay in the public history: they record the
+            engine and version names they were played under. Deletion is refused
+            while any of its games is pending or playing.
+          </p>
+        </DangerZone>
+      )}
 
       <Section title="versions">
         {engine.versions.length === 0 ? (

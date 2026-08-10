@@ -188,18 +188,8 @@
           "Auth & account"
         ],
         "summary": "Delete Account",
-        "description": "Delete the logged-in account: engines, uploaded versions and registry\nimages go, live games and tournaments are ended, played history stays.\n\n`payload.login` must repeat the account's own handle. The session is cleared\non the way out; signing in with GitHub again starts a brand-new account.",
+        "description": "Delete the logged-in account: engines, uploaded versions and registry\nimages go, live games and tournaments are ended, played history stays.\n\nThe website makes the user type their handle first; that gate is there to\nslow a human down, so it isn't re-checked here. The session is cleared on\nthe way out; signing in with GitHub again starts a brand-new account.",
         "operationId": "delete_account",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeleteAccountRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -211,16 +201,6 @@
                   },
                   "type": "object",
                   "title": "Response Delete Account"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1439,19 +1419,6 @@
           "last_used_at"
         ],
         "title": "ApiTokenOut"
-      },
-      "DeleteAccountRequest": {
-        "properties": {
-          "login": {
-            "type": "string",
-            "title": "Login"
-          }
-        },
-        "type": "object",
-        "required": [
-          "login"
-        ],
-        "title": "DeleteAccountRequest"
       },
       "EngineDetailOut": {
         "properties": {
