@@ -467,12 +467,7 @@ export function GameRow({ game }: { game: Game }) {
         <span className="text-neutral-500">vs</span>
         <span className="font-medium">{game.black_name}</span>
         {game.status === 'aborted' ? (
-          <span
-            className="ml-auto text-xs text-amber-500/80"
-            title={reason ?? undefined}
-          >
-            aborted
-          </span>
+          <span className="ml-auto text-xs text-amber-500/80">aborted</span>
         ) : (
           <span className="ml-auto font-mono text-xs text-neutral-400">
             {game.status === 'playing' ? '…' : (game.result ?? '*')}
@@ -481,7 +476,7 @@ export function GameRow({ game }: { game: Game }) {
       </div>
       <div className="text-xs text-neutral-500 mt-0.5">
         {relativeTime(game.ended_at ?? game.created_at)}
-        {reason && game.status !== 'aborted' && <> · {reason}</>}
+        {reason && <> · {reason}</>}
       </div>
     </Link>
   )
