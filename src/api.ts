@@ -5,6 +5,7 @@ import type {
   EngineUpdateRequest,
   EngineVersionOut,
   EngineVersionUpdateRequest,
+  GameDetailOut,
   GameOut,
   HardwareInfo,
   PendingSignupOut,
@@ -184,7 +185,9 @@ export const fetchUserProfile = (login: string): Promise<UserProfile> =>
 
 export const fetchGames = (): Promise<Game[]> => request('/game')
 
-export const fetchGame = (id: string): Promise<Game> => request(`/game/${id}`)
+// One game with its per-ply analysis; the list endpoints leave that out.
+export const fetchGame = (id: string): Promise<GameDetail> =>
+  request(`/game/${id}`)
 
 export const fetchRunners = (): Promise<Runner[]> => request('/runners')
 
@@ -288,6 +291,7 @@ export type RunnerLive = RunnerLiveEvent
 export type Hardware = HardwareInfo
 export type RunnerTelemetry = Telemetry
 export type Game = GameOut
+export type GameDetail = GameDetailOut
 export type User = UserOut
 export type StreamEvent = SseStreamResponse
 export type ApiToken = ApiTokenOut
@@ -300,6 +304,8 @@ export type Standing = StandingRow
 
 export type {
   EngineUpdateRequest,
+  SearchInfo,
+  UciLine,
   EngineVersionUpdateRequest,
   GameStatus,
   LiveStreamEvent,

@@ -6,7 +6,13 @@ body {
 }
 
 :root {
-  --board-size: min(calc(100vw - 2rem), calc(100dvh - 8rem), 480px);
+  /* Two eval bars, their gap, and the gap to the board. */
+  --eval-bars: 3.75rem;
+  --board-size: min(
+    calc(100vw - 2rem - var(--eval-bars)),
+    calc(100dvh - 8rem),
+    480px
+  );
 }
 
 /* chessground 10.x: brown.css assigns rank coord colors via :nth-child without

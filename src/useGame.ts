@@ -1,10 +1,40 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   fetchGame,
   gameStreamUrl,
   type GameStatus,
+  type SearchInfo,
   type StreamEvent,
+  type UciLine,
 } from './api'
+
+/** The search an engine is running right now, as it last reported it. Only one
+    engine thinks at a time, so a single slot holds it; `ply` says which
+    position it is about, which is how a stale one is spotted after a move. */
+export type LiveSearch = {
+  side: 'white' | 'black'
+  ply: number
+  info: SearchInfo
+}
+
+/** A transcript line with a stable identity. The buffer slides once it is
+    full, so a line's index is not its own — and a key that moves re-renders
+    every row under it on each batch. */
+export type LoggedLine = UciLine & { seq: number }
+
+/** How much of the UCI conversation the page keeps. The backend already caps
+    what it replays; this bounds a long game watched from the first move. */
+const UCI_LIMIT = 2000
+
+/** Number the lines of one batch, continuing from the counter. */
+function tag(
+  lines: UciLine[],
+  counter: { current: number },
+): LoggedLine[] {
+  const start = counter.current
+  counter.current += lines.length
+  return lines.map((line, i) => ({ ...line, seq: start + i }))
+}
 
 export type Clocks = { white: number; black: number; updatedAt: number }
 
@@ -26,6 +56,13 @@ export function useGame(id: string | undefined) {
   const [tc, setTc] = useState<string | null>(null)
   const [runnerId, setRunnerId] = useState<string | null>(null)
   const [moves, setMoves] = useState<string[]>([])
+  // Parallel to `moves`: what each mover's search reported. The live search and
+  // the UCI transcript are stream-only; a finished game keeps the tail of the
+  // transcript on its doc.
+  const [evals, setEvals] = useState<(SearchInfo | null)[]>([])
+  const [liveSearch, setLiveSearch] = useState<LiveSearch | null>(null)
+  const [uciLines, setUciLines] = useState<LoggedLine[]>([])
+  const nextSeq = useRef(0)
   const [result, setResult] = useState<string | null>(null)
   const [reason, setReason] = useState<string | null>(null)
   const [status, setStatus] = useState<GameStatus | null>(null)
@@ -44,6 +81,8 @@ export function useGame(id: string | undefined) {
         setTc(g.tc ?? null)
         setRunnerId(g.runner_id ?? null)
         setMoves(g.moves)
+        setEvals(g.evals ?? [])
+        setUciLines(tag(g.uci_tail ?? [], nextSeq))
         setResult(g.result)
         setReason(g.reason ?? null)
         setStatus(g.status)
@@ -77,6 +116,7 @@ export function useGame(id: string | undefined) {
         setWhiteName(event.white_name)
         setBlackName(event.black_name)
         setMoves(event.moves ?? [])
+        setEvals(event.evals ?? [])
         setResult(event.result)
         setClocks({
           white: event.white_clock,
@@ -90,15 +130,25 @@ export function useGame(id: string | undefined) {
         setWhiteName(event.white_name)
         setBlackName(event.black_name)
         setMoves([])
+        setEvals([])
+        setUciLines([])
+        nextSeq.current = 0
+        setLiveSearch(null)
         setClocks(null)
         setStatus('playing')
       } else if (event.type === 'move') {
         setMoves((prev) => [...prev, event.san])
+        setEvals((prev) => [...prev, event.analysis ?? null])
         setClocks({
           white: event.white_clock,
           black: event.black_clock,
           updatedAt: Date.now(),
         })
+      } else if (event.type === 'engine_info') {
+        setLiveSearch({ side: event.side, ply: event.ply, info: event.info })
+      } else if (event.type === 'uci_log') {
+        const batch = tag(event.lines, nextSeq)
+        setUciLines((prev) => [...prev, ...batch].slice(-UCI_LIMIT))
       } else if (event.type === 'game_end') {
         setResult(event.result)
         setReason(event.reason ?? null)
@@ -120,6 +170,9 @@ export function useGame(id: string | undefined) {
     tc,
     runnerId,
     moves,
+    evals,
+    liveSearch,
+    uciLines,
     result,
     reason,
     status,

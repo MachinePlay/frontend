@@ -2,11 +2,18 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import type { Config } from '@lichess-org/chessground/config'
 import { Chessground } from '../Chessground'
-import { cancelGame, runnerUrl, type GameStatus } from '../api'
+import { cancelGame, runnerUrl, type GameStatus, type SearchInfo } from '../api'
 import { useAuth } from '../auth-context'
+import { EvalBar } from '../EvalBar'
+import { evalsAt, formatEval, toWhite } from '../eval'
 import { formatClock } from '../format'
+import { GameDebug } from '../GameDebug'
+import { GameLines } from '../GameLines'
 import { useGame } from '../useGame'
 import { usePositions } from '../usePositions'
+
+const TABS = ['moves', 'lines', 'debug'] as const
+type Tab = (typeof TABS)[number]
 
 const PIECE_NAMES: Record<string, string> = {
   q: 'queen',
@@ -147,10 +154,12 @@ const MoveRow = memo(function MoveRow({
   return (
     <li data-active={activeSide !== null} className="flex gap-2">
       <span className="text-neutral-500 w-6 shrink-0 text-right">{number}.</span>
+      {/* Both halves are the same width: a highlighted white move used to be a
+          short chip and a black one a bar running off the panel. */}
       <button
         type="button"
         onClick={() => onJump(number * 2 - 1)}
-        className={`w-14 shrink-0 text-left px-1 rounded ${
+        className={`flex-1 basis-0 min-w-0 text-left px-1 rounded ${
           activeSide === 'white'
             ? 'bg-neutral-100 text-neutral-900'
             : 'text-neutral-100 hover:bg-neutral-800'
@@ -162,7 +171,7 @@ const MoveRow = memo(function MoveRow({
         <button
           type="button"
           onClick={() => onJump(number * 2)}
-          className={`flex-1 text-left px-1 rounded ${
+          className={`flex-1 basis-0 min-w-0 text-left px-1 rounded ${
             activeSide === 'black'
               ? 'bg-neutral-100 text-neutral-900'
               : 'text-neutral-300 hover:bg-neutral-800'
@@ -371,6 +380,9 @@ export default function GamePage() {
     tc,
     runnerId,
     moves,
+    evals,
+    liveSearch,
+    uciLines,
     result,
     reason,
     status: gameStatus,
@@ -378,6 +390,8 @@ export default function GamePage() {
   } = useGame(id)
   const [orientation, setOrientation] = useState<'white' | 'black'>('white')
   const [viewPly, setViewPly] = useState<number | null>(null)
+  const [tab, setTab] = useState<Tab>('moves')
+  const boardRef = useRef<HTMLDivElement | null>(null)
 
   const effectiveViewPly = viewPly ?? moves.length
   const following = viewPly === null && gameStatus === 'playing'
@@ -412,6 +426,39 @@ export default function GamePage() {
     [moves.length, gameStatus],
   )
 
+  const step = useCallback(
+    (delta: number) => {
+      setViewPly((current) => {
+        const next = Math.max(
+          0,
+          Math.min(moves.length, (current ?? moves.length) + delta),
+        )
+        return next === moves.length && gameStatus === 'playing' ? null : next
+      })
+    },
+    [moves.length, gameStatus],
+  )
+
+  // Wheel over the board walks the game, the way lichess does. The listener is
+  // native and non-passive because React's own `onWheel` is passive, so it
+  // could not stop the page from scrolling underneath.
+  useEffect(() => {
+    const board = boardRef.current
+    if (!board) return
+    let last = 0
+    const onWheel = (e: WheelEvent) => {
+      if (!e.deltaY) return
+      e.preventDefault()
+      // A trackpad flick is dozens of events; one ply per 30ms keeps a mouse
+      // notch at exactly one move and a flick at a readable run.
+      if (e.timeStamp - last < 30) return
+      last = e.timeStamp
+      step(e.deltaY > 0 ? 1 : -1)
+    }
+    board.addEventListener('wheel', onWheel, { passive: false })
+    return () => board.removeEventListener('wheel', onWheel)
+  }, [step])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
@@ -426,10 +473,10 @@ export default function GamePage() {
       }
       if (e.key === 'ArrowLeft') {
         e.preventDefault()
-        jumpTo(effectiveViewPly - 1)
+        step(-1)
       } else if (e.key === 'ArrowRight') {
         e.preventDefault()
-        jumpTo(effectiveViewPly + 1)
+        step(1)
       } else if (e.key === 'ArrowUp' || e.key === 'Home') {
         e.preventDefault()
         jumpTo(0)
@@ -440,7 +487,32 @@ export default function GamePage() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [effectiveViewPly, moves.length, jumpTo])
+  }, [moves.length, jumpTo, step])
+
+  // What each engine last said about the position on screen: the search still
+  // running when it is this side's turn in the live game, else the search that
+  // produced its most recent move.
+  const stored = evalsAt(evals, effectiveViewPly)
+  const liveIsCurrent =
+    liveSearch !== null && following && liveSearch.ply === moves.length
+  const searchFor = (
+    side: 'white' | 'black',
+  ): { info: SearchInfo | null; fen: string | null; startPly: number } => {
+    if (liveIsCurrent && liveSearch.side === side) {
+      return { info: liveSearch.info, fen: displayFen, startPly: moves.length }
+    }
+    const found = stored[side]
+    if (!found) return { info: null, fen: null, startPly: 0 }
+    return {
+      info: found.info,
+      fen: positions[Math.min(found.ply, positions.length - 1)].fen,
+      startPly: found.ply,
+    }
+  }
+  const whiteSearch = searchFor('white')
+  const blackSearch = searchFor('black')
+  const whiteEval = toWhite(whiteSearch.info, 'white')
+  const blackEval = toWhite(blackSearch.info, 'black')
 
   const { byWhite, byBlack } = captured(displayFen)
   const sideToMove: 'white' | 'black' =
@@ -482,47 +554,113 @@ export default function GamePage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col items-center gap-4 sm:gap-6">
-      <div className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[auto_auto] sm:gap-x-3">
-        <div className="sm:col-start-1 sm:row-start-1">
+      <div className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[auto_auto_auto] sm:gap-x-3">
+        <div className="sm:col-start-2 sm:row-start-1">
           <PlayerBar {...top} />
         </div>
-        <div className="relative sm:col-start-1 sm:row-start-2">
-          <Chessground config={cgConfig} />
-          <button
-            type="button"
-            onClick={() =>
-              setOrientation((o) => (o === 'white' ? 'black' : 'white'))
-            }
-            aria-label="flip board"
-            title="flip board"
-            className="absolute -top-2 -right-2 bg-neutral-900 border border-neutral-700 text-neutral-200 hover:bg-neutral-800 rounded-full p-1.5 leading-none shadow"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        {/* Bars and board sit side by side on every width: `contents` hands the
+            two children straight to the grid once it takes over. */}
+        <div className="flex gap-2 sm:contents">
+          <div className="flex gap-1 sm:col-start-1 sm:row-start-2">
+            <EvalBar
+              side="white"
+              title={`white engine${whiteName ? ` (${whiteName})` : ''}: ${formatEval(whiteEval)}${
+                whiteSearch.info?.depth
+                  ? ` at depth ${whiteSearch.info.depth}`
+                  : ''
+              }`}
+              value={whiteEval}
+              flipped={orientation === 'black'}
+            />
+            <EvalBar
+              side="black"
+              title={`black engine${blackName ? ` (${blackName})` : ''}: ${formatEval(blackEval)}${
+                blackSearch.info?.depth
+                  ? ` at depth ${blackSearch.info.depth}`
+                  : ''
+              }`}
+              value={blackEval}
+              flipped={orientation === 'black'}
+            />
+          </div>
+          <div ref={boardRef} className="relative sm:col-start-2 sm:row-start-2">
+            <Chessground config={cgConfig} />
+            <button
+              type="button"
+              onClick={() =>
+                setOrientation((o) => (o === 'white' ? 'black' : 'white'))
+              }
+              aria-label="flip board"
+              title="flip board"
+              className="absolute -top-2 -right-2 bg-neutral-900 border border-neutral-700 text-neutral-200 hover:bg-neutral-800 rounded-full p-1.5 leading-none shadow"
             >
-              <path d="M17 2l4 4-4 4" />
-              <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
-              <path d="M7 22l-4-4 4-4" />
-              <path d="M21 13v1a4 4 0 0 1-4 4H3" />
-            </svg>
-          </button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M17 2l4 4-4 4" />
+                <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+                <path d="M7 22l-4-4 4-4" />
+                <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+              </svg>
+            </button>
+          </div>
         </div>
-        <div className="sm:col-start-1 sm:row-start-3">
+        <div className="sm:col-start-2 sm:row-start-3">
           <PlayerBar {...bottom} />
         </div>
-        <div className="flex flex-col w-full h-32 sm:w-48 sm:h-[var(--board-size)] sm:col-start-2 sm:row-start-2 bg-neutral-900 border border-neutral-800 rounded overflow-hidden">
-          <MoveList
-            moves={moves}
-            activePly={effectiveViewPly}
-            onJump={jumpTo}
-          />
+        {/* An explicit width, never `w-full`: the debug transcript does not wrap,
+            so a panel sized by its content would stretch the page sideways. */}
+        <div className="flex flex-col w-[calc(var(--board-size)+var(--eval-bars))] h-64 sm:w-72 sm:h-[var(--board-size)] sm:col-start-3 sm:row-start-2 bg-neutral-900 border border-neutral-800 rounded overflow-hidden">
+          <div className="flex border-b border-neutral-800 text-xs">
+            {TABS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTab(t)}
+                className={`flex-1 py-1.5 border-b-2 -mb-px transition-colors ${
+                  tab === t
+                    ? 'border-neutral-300 text-neutral-100'
+                    : 'border-transparent text-neutral-500 hover:text-neutral-300'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          {tab === 'moves' && (
+            <MoveList
+              moves={moves}
+              activePly={effectiveViewPly}
+              onJump={jumpTo}
+            />
+          )}
+          {tab === 'lines' && (
+            <GameLines
+              white={{
+                name: whiteName,
+                thinking: liveIsCurrent && liveSearch.side === 'white',
+                ...whiteSearch,
+              }}
+              black={{
+                name: blackName,
+                thinking: liveIsCurrent && liveSearch.side === 'black',
+                ...blackSearch,
+              }}
+              evals={evals}
+              activePly={effectiveViewPly}
+              onJump={jumpTo}
+            />
+          )}
+          {tab === 'debug' && (
+            <GameDebug lines={uciLines} live={gameStatus === 'playing'} />
+          )}
           <MoveNav
             activePly={effectiveViewPly}
             plies={moves.length}
@@ -553,7 +691,7 @@ export default function GamePage() {
             </button>
           )}
         </div>
-        <div className="text-center sm:col-start-2 sm:row-start-3">
+        <div className="text-center sm:col-start-3 sm:row-start-3">
           {id && (
             <GameStatusPanel
               gameId={id}

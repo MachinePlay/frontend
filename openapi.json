@@ -896,7 +896,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GameOut"
+                  "$ref": "#/components/schemas/GameDetailOut"
                 }
               }
             }
@@ -1271,6 +1271,12 @@
                       "$ref": "#/components/schemas/MoveEvent"
                     },
                     {
+                      "$ref": "#/components/schemas/EngineInfoEvent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/UciLogEvent"
+                    },
+                    {
                       "$ref": "#/components/schemas/GameEndEvent"
                     }
                   ],
@@ -1280,6 +1286,8 @@
                       "fen": "#/components/schemas/FenEvent",
                       "game_start": "#/components/schemas/GameStartEvent",
                       "move": "#/components/schemas/MoveEvent",
+                      "engine_info": "#/components/schemas/EngineInfoEvent",
+                      "uci_log": "#/components/schemas/UciLogEvent",
                       "game_end": "#/components/schemas/GameEndEvent"
                     }
                   },
@@ -1478,6 +1486,39 @@
           "games"
         ],
         "title": "EngineDetailOut"
+      },
+      "EngineInfoEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "engine_info",
+            "title": "Type",
+            "default": "engine_info"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "white",
+              "black"
+            ],
+            "title": "Side"
+          },
+          "ply": {
+            "type": "integer",
+            "title": "Ply"
+          },
+          "info": {
+            "$ref": "#/components/schemas/SearchInfo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "side",
+          "ply",
+          "info"
+        ],
+        "title": "EngineInfoEvent",
+        "description": "An engine's search-in-progress, sent while it is still thinking.\n\nThrottled by the runner (a new depth, or every few hundred ms) and never\npersisted: it is superseded by the MoveEvent's `analysis` as soon as the\nengine moves."
       },
       "EngineOut": {
         "properties": {
@@ -1735,6 +1776,20 @@
             "type": "array",
             "title": "Moves"
           },
+          "evals": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SearchInfo"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Evals"
+          },
           "white_clock": {
             "type": "number",
             "title": "White Clock"
@@ -1784,6 +1839,216 @@
           "game_id"
         ],
         "title": "FenEvent"
+      },
+      "GameDetailOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "white_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "White Id"
+          },
+          "black_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Black Id"
+          },
+          "white_name": {
+            "type": "string",
+            "title": "White Name"
+          },
+          "black_name": {
+            "type": "string",
+            "title": "Black Name"
+          },
+          "white_version": {
+            "type": "string",
+            "title": "White Version"
+          },
+          "black_version": {
+            "type": "string",
+            "title": "Black Version"
+          },
+          "white_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "White Version Id"
+          },
+          "black_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Black Version Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/GameStatus"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "moves": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Moves"
+          },
+          "fen": {
+            "type": "string",
+            "title": "Fen"
+          },
+          "pgn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pgn"
+          },
+          "white_clock": {
+            "type": "number",
+            "title": "White Clock"
+          },
+          "black_clock": {
+            "type": "number",
+            "title": "Black Clock"
+          },
+          "tc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tc"
+          },
+          "runner_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runner Id"
+          },
+          "tournament_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tournament Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "evals": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SearchInfo"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Evals",
+            "default": []
+          },
+          "uci_tail": {
+            "items": {
+              "$ref": "#/components/schemas/UciLine"
+            },
+            "type": "array",
+            "title": "Uci Tail",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "white_id",
+          "black_id",
+          "white_name",
+          "black_name",
+          "white_version",
+          "black_version",
+          "status",
+          "result",
+          "moves",
+          "fen",
+          "pgn",
+          "white_clock",
+          "black_clock",
+          "created_at",
+          "ended_at"
+        ],
+        "title": "GameDetailOut",
+        "description": "One game's page: everything the list view carries, plus the analysis the\nengines produced. Both fields are per-ply and can run to hundreds of\nentries, so they stay out of the list responses."
       },
       "GameEndEvent": {
         "properties": {
@@ -2145,6 +2410,12 @@
                 "$ref": "#/components/schemas/MoveEvent"
               },
               {
+                "$ref": "#/components/schemas/EngineInfoEvent"
+              },
+              {
+                "$ref": "#/components/schemas/UciLogEvent"
+              },
+              {
                 "$ref": "#/components/schemas/GameEndEvent"
               }
             ],
@@ -2152,10 +2423,12 @@
             "discriminator": {
               "propertyName": "type",
               "mapping": {
+                "engine_info": "#/components/schemas/EngineInfoEvent",
                 "fen": "#/components/schemas/FenEvent",
                 "game_end": "#/components/schemas/GameEndEvent",
                 "game_start": "#/components/schemas/GameStartEvent",
-                "move": "#/components/schemas/MoveEvent"
+                "move": "#/components/schemas/MoveEvent",
+                "uci_log": "#/components/schemas/UciLogEvent"
               }
             }
           }
@@ -2206,6 +2479,16 @@
           "black_clock": {
             "type": "number",
             "title": "Black Clock"
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SearchInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -2432,6 +2715,97 @@
         },
         "type": "object",
         "title": "RunnerUpdateRequest"
+      },
+      "SearchInfo": {
+        "properties": {
+          "depth": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth"
+          },
+          "seldepth": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seldepth"
+          },
+          "score_cp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Cp"
+          },
+          "score_mate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Mate"
+          },
+          "nodes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodes"
+          },
+          "nps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nps"
+          },
+          "time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Ms"
+          },
+          "pv": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pv"
+          }
+        },
+        "type": "object",
+        "title": "SearchInfo",
+        "description": "What one engine reported about its search, distilled from `info` lines.\n\nScores are UCI's own: from the searching side's point of view, in\ncentipawns (`score_cp`) or moves-to-mate (`score_mate`), never both. `pv`\nis the principal variation in UCI move notation, capped so a chatty engine\ncan't push arbitrarily large events."
       },
       "StandingRow": {
         "properties": {
@@ -2924,6 +3298,62 @@
           "aborted"
         ],
         "title": "TournamentStatus"
+      },
+      "UciLine": {
+        "properties": {
+          "side": {
+            "type": "string",
+            "enum": [
+              "white",
+              "black"
+            ],
+            "title": "Side"
+          },
+          "sent": {
+            "type": "boolean",
+            "title": "Sent"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "ply": {
+            "type": "integer",
+            "title": "Ply"
+          }
+        },
+        "type": "object",
+        "required": [
+          "side",
+          "sent",
+          "text",
+          "ply"
+        ],
+        "title": "UciLine",
+        "description": "One line of the UCI conversation, for the game page's debug view.\n\n`sent` is True for what the GUI sent the engine (fastchess's `<---`) and\nFalse for the engine's own output (`--->`). `ply` is the game's ply when\nthe line was logged, so the view can be read alongside the moves."
+      },
+      "UciLogEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "uci_log",
+            "title": "Type",
+            "default": "uci_log"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/UciLine"
+            },
+            "type": "array",
+            "title": "Lines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lines"
+        ],
+        "title": "UciLogEvent",
+        "description": "A batch of UCI transcript lines. Live-only; the backend keeps a bounded\ntail so a page opened mid-game (or after it ends) still has context."
       },
       "UserOut": {
         "properties": {

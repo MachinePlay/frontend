@@ -65,6 +65,31 @@ export type EngineDetailOut = {
 };
 
 /**
+ * EngineInfoEvent
+ *
+ * An engine's search-in-progress, sent while it is still thinking.
+ *
+ * Throttled by the runner (a new depth, or every few hundred ms) and never
+ * persisted: it is superseded by the MoveEvent's `analysis` as soon as the
+ * engine moves.
+ */
+export type EngineInfoEvent = {
+    /**
+     * Type
+     */
+    type?: 'engine_info';
+    /**
+     * Side
+     */
+    side: 'white' | 'black';
+    /**
+     * Ply
+     */
+    ply: number;
+    info: SearchInfo;
+};
+
+/**
  * EngineOut
  */
 export type EngineOut = {
@@ -233,6 +258,10 @@ export type FenEvent = {
      */
     moves: Array<string>;
     /**
+     * Evals
+     */
+    evals?: Array<SearchInfo | null>;
+    /**
      * White Clock
      */
     white_clock: number;
@@ -249,6 +278,109 @@ export type FenEvent = {
      * Game Id
      */
     game_id: string | null;
+};
+
+/**
+ * GameDetailOut
+ *
+ * One game's page: everything the list view carries, plus the analysis the
+ * engines produced. Both fields are per-ply and can run to hundreds of
+ * entries, so they stay out of the list responses.
+ */
+export type GameDetailOut = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * White Id
+     */
+    white_id: string;
+    /**
+     * Black Id
+     */
+    black_id: string;
+    /**
+     * White Name
+     */
+    white_name: string;
+    /**
+     * Black Name
+     */
+    black_name: string;
+    /**
+     * White Version
+     */
+    white_version: string;
+    /**
+     * Black Version
+     */
+    black_version: string;
+    /**
+     * White Version Id
+     */
+    white_version_id?: string | null;
+    /**
+     * Black Version Id
+     */
+    black_version_id?: string | null;
+    status: GameStatus;
+    /**
+     * Result
+     */
+    result: string | null;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Moves
+     */
+    moves: Array<string>;
+    /**
+     * Fen
+     */
+    fen: string;
+    /**
+     * Pgn
+     */
+    pgn: string | null;
+    /**
+     * White Clock
+     */
+    white_clock: number;
+    /**
+     * Black Clock
+     */
+    black_clock: number;
+    /**
+     * Tc
+     */
+    tc?: string | null;
+    /**
+     * Runner Id
+     */
+    runner_id?: string | null;
+    /**
+     * Tournament Id
+     */
+    tournament_id?: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Ended At
+     */
+    ended_at: string | null;
+    /**
+     * Evals
+     */
+    evals?: Array<SearchInfo | null>;
+    /**
+     * Uci Tail
+     */
+    uci_tail?: Array<UciLine>;
 };
 
 /**
@@ -447,6 +579,10 @@ export type LiveStreamEvent = {
     } & GameStartEvent) | ({
         type: 'move';
     } & MoveEvent) | ({
+        type: 'engine_info';
+    } & EngineInfoEvent) | ({
+        type: 'uci_log';
+    } & UciLogEvent) | ({
         type: 'game_end';
     } & GameEndEvent);
 };
@@ -491,6 +627,7 @@ export type MoveEvent = {
      * Black Clock
      */
     black_clock: number;
+    analysis?: SearchInfo | null;
 };
 
 /**
@@ -621,6 +758,51 @@ export type RunnerUpdateRequest = {
      * Description
      */
     description?: string | null;
+};
+
+/**
+ * SearchInfo
+ *
+ * What one engine reported about its search, distilled from `info` lines.
+ *
+ * Scores are UCI's own: from the searching side's point of view, in
+ * centipawns (`score_cp`) or moves-to-mate (`score_mate`), never both. `pv`
+ * is the principal variation in UCI move notation, capped so a chatty engine
+ * can't push arbitrarily large events.
+ */
+export type SearchInfo = {
+    /**
+     * Depth
+     */
+    depth?: number | null;
+    /**
+     * Seldepth
+     */
+    seldepth?: number | null;
+    /**
+     * Score Cp
+     */
+    score_cp?: number | null;
+    /**
+     * Score Mate
+     */
+    score_mate?: number | null;
+    /**
+     * Nodes
+     */
+    nodes?: number | null;
+    /**
+     * Nps
+     */
+    nps?: number | null;
+    /**
+     * Time Ms
+     */
+    time_ms?: number | null;
+    /**
+     * Pv
+     */
+    pv?: Array<string>;
 };
 
 /**
@@ -932,6 +1114,51 @@ export type TournamentParticipantOut = {
  * TournamentStatus
  */
 export type TournamentStatus = 'running' | 'completed' | 'aborted';
+
+/**
+ * UciLine
+ *
+ * One line of the UCI conversation, for the game page's debug view.
+ *
+ * `sent` is True for what the GUI sent the engine (fastchess's `<---`) and
+ * False for the engine's own output (`--->`). `ply` is the game's ply when
+ * the line was logged, so the view can be read alongside the moves.
+ */
+export type UciLine = {
+    /**
+     * Side
+     */
+    side: 'white' | 'black';
+    /**
+     * Sent
+     */
+    sent: boolean;
+    /**
+     * Text
+     */
+    text: string;
+    /**
+     * Ply
+     */
+    ply: number;
+};
+
+/**
+ * UciLogEvent
+ *
+ * A batch of UCI transcript lines. Live-only; the backend keeps a bounded
+ * tail so a page opened mid-game (or after it ends) still has context.
+ */
+export type UciLogEvent = {
+    /**
+     * Type
+     */
+    type?: 'uci_log';
+    /**
+     * Lines
+     */
+    lines: Array<UciLine>;
+};
 
 /**
  * UserOut
@@ -1629,7 +1856,7 @@ export type GetGameResponses = {
     /**
      * Successful Response
      */
-    200: GameOut;
+    200: GameDetailOut;
 };
 
 export type GetGameResponse = GetGameResponses[keyof GetGameResponses];
@@ -1867,6 +2094,10 @@ export type SseStreamResponses = {
     } & GameStartEvent) | ({
         type: 'move';
     } & MoveEvent) | ({
+        type: 'engine_info';
+    } & EngineInfoEvent) | ({
+        type: 'uci_log';
+    } & UciLogEvent) | ({
         type: 'game_end';
     } & GameEndEvent);
 };
