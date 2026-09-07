@@ -223,6 +223,64 @@ const MoveList = memo(function MoveList({
   )
 })
 
+/** A single or double chevron, pointing left unless flipped. */
+function Chevron({ dir, double }: { dir: 'left' | 'right'; double?: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={dir === 'right' ? 'rotate-180' : undefined}
+    >
+      <path d="M15 18l-6-6 6-6" />
+      {double && <path d="M9 18l-6-6 6-6" />}
+    </svg>
+  )
+}
+
+/** Start / back / forward / end, under the move list — the same jumps the
+    arrow, up and down keys make. */
+function MoveNav({
+  activePly,
+  plies,
+  onJump,
+}: {
+  activePly: number
+  plies: number
+  onJump: (ply: number) => void
+}) {
+  const atStart = activePly <= 0
+  const atEnd = activePly >= plies
+  const steps = [
+    { to: 0, title: 'game start (↑)', off: atStart, icon: <Chevron dir="left" double /> },
+    { to: activePly - 1, title: 'previous move (←)', off: atStart, icon: <Chevron dir="left" /> },
+    { to: activePly + 1, title: 'next move (→)', off: atEnd, icon: <Chevron dir="right" /> },
+    { to: plies, title: 'game end (↓)', off: atEnd, icon: <Chevron dir="right" double /> },
+  ]
+  return (
+    <div className="flex border-t border-neutral-800">
+      {steps.map((s) => (
+        <button
+          key={s.title}
+          type="button"
+          title={s.title}
+          aria-label={s.title}
+          disabled={s.off}
+          onClick={() => onJump(s.to)}
+          className="flex-1 flex items-center justify-center py-1.5 text-neutral-300 transition-colors hover:bg-neutral-800 disabled:opacity-25 disabled:hover:bg-transparent"
+        >
+          {s.icon}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 /** Terminal state under the move list: result + termination reason, or a
     cancel control while the game is playing (logged-in users only). */
 function GameStatusPanel({
@@ -372,10 +430,10 @@ export default function GamePage() {
       } else if (e.key === 'ArrowRight') {
         e.preventDefault()
         jumpTo(effectiveViewPly + 1)
-      } else if (e.key === 'Home') {
+      } else if (e.key === 'ArrowUp' || e.key === 'Home') {
         e.preventDefault()
         jumpTo(0)
-      } else if (e.key === 'End') {
+      } else if (e.key === 'ArrowDown' || e.key === 'End') {
         e.preventDefault()
         jumpTo(moves.length)
       }
@@ -463,6 +521,11 @@ export default function GamePage() {
           <MoveList
             moves={moves}
             activePly={effectiveViewPly}
+            onJump={jumpTo}
+          />
+          <MoveNav
+            activePly={effectiveViewPly}
+            plies={moves.length}
             onJump={jumpTo}
           />
           {showFollowToggle && (
