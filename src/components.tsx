@@ -1,11 +1,13 @@
 import {
   useEffect,
+  useMemo,
   useState,
   type ComponentProps,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from 'react'
 import { Link } from 'react-router'
+import type { Config } from '@lichess-org/chessground/config'
 import { Chessground } from './Chessground'
 import {
   ApiError,
@@ -497,20 +499,23 @@ export function GameList({ games }: { games: Game[] }) {
     card, reused on the tournament page. */
 export function LiveGameCard({ game }: { game: Game }) {
   const moveNo = Math.max(1, Math.ceil(game.moves.length / 2))
+  // A fresh config object would redraw the board on every unrelated render of
+  // the dashboard; keep one per position.
+  const config = useMemo(
+    (): Config => ({
+      fen: game.fen,
+      viewOnly: true,
+      coordinates: false,
+      drawable: { enabled: false },
+    }),
+    [game.fen],
+  )
   return (
     <Link
       to={gameUrl(game.id)}
       className="group flex flex-col gap-2 rounded-lg border border-neutral-800 hover:border-neutral-600 bg-neutral-900/60 p-3 transition-colors"
     >
-      <Chessground
-        className="!w-full"
-        config={{
-          fen: game.fen,
-          viewOnly: true,
-          coordinates: false,
-          drawable: { enabled: false },
-        }}
-      />
+      <Chessground className="!w-full" config={config} />
       <div className="flex items-center gap-2 text-sm">
         <span className="font-medium truncate">{game.white_name}</span>
         <span className="text-neutral-500">vs</span>

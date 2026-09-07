@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import type { Api } from '@lichess-org/chessground/api'
-import { Chess } from 'chess.js'
+import type { Config } from '@lichess-org/chessground/config'
 import { Chessground } from '../Chessground'
 import { cancelGame, runnerUrl, type GameStatus } from '../api'
 import { useAuth } from '../auth-context'
 import { formatClock } from '../format'
 import { useGame } from '../useGame'
+import { usePositions } from '../usePositions'
 
 const PIECE_NAMES: Record<string, string> = {
   q: 'queen',
@@ -57,20 +57,40 @@ function CapturedPieces({ pieces }: { pieces: CapturedPiece[] }) {
   )
 }
 
-function replay(moves: string[], ply: number) {
-  const chess = new Chess()
-  let lastFrom: string | undefined
-  let lastTo: string | undefined
-  for (let i = 0; i < ply && i < moves.length; i++) {
-    try {
-      const m = chess.move(moves[i])
-      lastFrom = m.from
-      lastTo = m.to
-    } catch {
-      break
-    }
-  }
-  return { fen: chess.fen(), lastFrom, lastTo }
+/** The side's remaining time. While it is this side's turn the countdown runs
+    on an interval owned *here*, so ten ticks a second re-render one span
+    instead of the board and the whole move list. */
+function Clock({
+  base,
+  since,
+  ticking,
+}: {
+  base: number
+  since: number
+  ticking: boolean
+}) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (!ticking) return
+    const t = setInterval(() => setNow(Date.now()), 100)
+    return () => clearInterval(t)
+  }, [ticking])
+
+  const seconds = ticking
+    ? Math.max(0, base - Math.max(0, (now - since) / 1000))
+    : base
+  return (
+    <span
+      className={`ml-auto font-mono tabular-nums px-1.5 py-0.5 rounded ${
+        ticking
+          ? 'bg-neutral-100 text-neutral-900'
+          : 'bg-neutral-900 text-neutral-400 border border-neutral-800'
+      }`}
+    >
+      {formatClock(seconds)}
+    </span>
+  )
 }
 
 /** One side's row above/below the board: color label, engine name + version,
@@ -81,6 +101,7 @@ function PlayerBar({
   version,
   pieces,
   clock,
+  since,
   active,
 }: {
   color: 'white' | 'black'
@@ -88,6 +109,7 @@ function PlayerBar({
   version: string | null
   pieces: CapturedPiece[]
   clock: number | null
+  since: number
   active: boolean
 }) {
   return (
@@ -101,19 +123,105 @@ function PlayerBar({
       )}
       <CapturedPieces pieces={pieces} />
       {clock !== null && (
-        <span
-          className={`ml-auto font-mono tabular-nums px-1.5 py-0.5 rounded ${
-            active
-              ? 'bg-neutral-100 text-neutral-900'
-              : 'bg-neutral-900 text-neutral-400 border border-neutral-800'
-          }`}
-        >
-          {formatClock(clock)}
-        </span>
+        <Clock base={clock} since={since} ticking={active} />
       )}
     </div>
   )
 }
+
+/** One numbered pair of plies. Memoized because a 400-ply game re-renders its
+    list on every incoming move, and only the touched rows actually change. */
+const MoveRow = memo(function MoveRow({
+  number,
+  white,
+  black,
+  activeSide,
+  onJump,
+}: {
+  number: number
+  white: string
+  black: string | undefined
+  activeSide: 'white' | 'black' | null
+  onJump: (ply: number) => void
+}) {
+  return (
+    <li data-active={activeSide !== null} className="flex gap-2">
+      <span className="text-neutral-500 w-6 shrink-0 text-right">{number}.</span>
+      <button
+        type="button"
+        onClick={() => onJump(number * 2 - 1)}
+        className={`w-14 shrink-0 text-left px-1 rounded ${
+          activeSide === 'white'
+            ? 'bg-neutral-100 text-neutral-900'
+            : 'text-neutral-100 hover:bg-neutral-800'
+        }`}
+      >
+        {white}
+      </button>
+      {black !== undefined && (
+        <button
+          type="button"
+          onClick={() => onJump(number * 2)}
+          className={`flex-1 text-left px-1 rounded ${
+            activeSide === 'black'
+              ? 'bg-neutral-100 text-neutral-900'
+              : 'text-neutral-300 hover:bg-neutral-800'
+          }`}
+        >
+          {black}
+        </button>
+      )}
+    </li>
+  )
+})
+
+/** The scrollable move list, kept out of the page's own render so a ticking
+    clock doesn't touch it. */
+const MoveList = memo(function MoveList({
+  moves,
+  activePly,
+  onJump,
+}: {
+  moves: string[]
+  activePly: number
+  onJump: (ply: number) => void
+}) {
+  const listRef = useRef<HTMLOListElement | null>(null)
+
+  useEffect(() => {
+    listRef.current
+      ?.querySelector('[data-active="true"]')
+      ?.scrollIntoView({ block: 'nearest' })
+  }, [activePly, moves.length])
+
+  return (
+    <ol
+      ref={listRef}
+      className="flex-1 min-h-0 overflow-y-auto text-sm font-mono p-2 space-y-0.5"
+    >
+      {moves.length === 0 ? (
+        <li className="text-neutral-600 italic">no moves yet</li>
+      ) : (
+        Array.from({ length: Math.ceil(moves.length / 2) }, (_, i) => (
+          <MoveRow
+            key={i}
+            number={i + 1}
+            white={moves[i * 2]}
+            black={moves[i * 2 + 1]}
+            activeSide={
+              activePly === i * 2 + 1
+                ? 'white'
+                : activePly === i * 2 + 2
+                  ? 'black'
+                  : null
+            }
+            onJump={onJump}
+          />
+        ))
+      )}
+    </ol>
+  )
+})
 
 /** Terminal state under the move list: result + termination reason, or a
     cancel control while the game is playing (logged-in users only). */
@@ -195,7 +303,6 @@ function GameStatusPanel({
 
 export default function GamePage() {
   const { id } = useParams<{ id: string }>()
-  const apiRef = useRef<Api | null>(null)
   const {
     loadError,
     connStatus,
@@ -213,45 +320,39 @@ export default function GamePage() {
   } = useGame(id)
   const [orientation, setOrientation] = useState<'white' | 'black'>('white')
   const [viewPly, setViewPly] = useState<number | null>(null)
-  const [now, setNow] = useState(() => Date.now())
-  const moveListRef = useRef<HTMLOListElement | null>(null)
-  const activeRowRef = useRef<HTMLLIElement | null>(null)
 
   const effectiveViewPly = viewPly ?? moves.length
   const following = viewPly === null && gameStatus === 'playing'
   const isClockTicking = gameStatus === 'playing' && following
 
-  const { fen: displayFen, lastFrom, lastTo } = useMemo(
-    () => replay(moves, effectiveViewPly),
-    [moves, effectiveViewPly],
+  // A move that failed to parse leaves the line short, so clamp rather than
+  // indexing past the end.
+  const positions = usePositions(moves)
+  const shown = positions[Math.min(effectiveViewPly, positions.length - 1)]
+  const displayFen = shown.fen
+
+  // One config object per actual change: Chessground's `set` redraws the board
+  // whenever this identity moves, and a new literal each render redraws it on
+  // every unrelated state change.
+  const cgConfig = useMemo(
+    (): Config => ({
+      viewOnly: true,
+      coordinates: true,
+      orientation,
+      fen: shown.fen,
+      lastMove: shown.from && shown.to ? [shown.from, shown.to] : undefined,
+    }),
+    [orientation, shown],
   )
 
-  useEffect(() => {
-    apiRef.current?.set({
-      fen: displayFen,
-      lastMove:
-        lastFrom && lastTo ? ([lastFrom, lastTo] as never) : undefined,
-    })
-  }, [displayFen, lastFrom, lastTo])
-
-  useEffect(() => {
-    activeRowRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [effectiveViewPly, moves.length])
-
-  useEffect(() => {
-    if (!isClockTicking) return
-    const id = setInterval(() => setNow(Date.now()), 100)
-    return () => clearInterval(id)
-  }, [isClockTicking])
-
-  const jumpTo = (targetPly: number) => {
-    const clamped = Math.max(0, Math.min(moves.length, targetPly))
-    if (clamped === moves.length && gameStatus === 'playing') {
-      setViewPly(null)
-    } else {
-      setViewPly(clamped)
-    }
-  }
+  const jumpTo = useCallback(
+    (targetPly: number) => {
+      const clamped = Math.max(0, Math.min(moves.length, targetPly))
+      const live = clamped === moves.length && gameStatus === 'playing'
+      setViewPly(live ? null : clamped)
+    },
+    [moves.length, gameStatus],
+  )
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -281,31 +382,18 @@ export default function GamePage() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveViewPly, moves.length, gameStatus])
+  }, [effectiveViewPly, moves.length, jumpTo])
 
   const { byWhite, byBlack } = captured(displayFen)
   const sideToMove: 'white' | 'black' =
     displayFen.split(' ')[1] === 'b' ? 'black' : 'white'
-  const elapsedSinceUpdate = clocks
-    ? Math.max(0, (now - clocks.updatedAt) / 1000)
-    : 0
-  const displayWhite = clocks
-    ? sideToMove === 'white' && isClockTicking
-      ? Math.max(0, clocks.white - elapsedSinceUpdate)
-      : clocks.white
-    : null
-  const displayBlack = clocks
-    ? sideToMove === 'black' && isClockTicking
-      ? Math.max(0, clocks.black - elapsedSinceUpdate)
-      : clocks.black
-    : null
   const whiteBar = {
     color: 'white',
     name: whiteName,
     version: whiteVersion,
     pieces: byWhite,
-    clock: displayWhite,
+    clock: clocks?.white ?? null,
+    since: clocks?.updatedAt ?? 0,
     active: isClockTicking && sideToMove === 'white',
   } as const
   const blackBar = {
@@ -313,7 +401,8 @@ export default function GamePage() {
     name: blackName,
     version: blackVersion,
     pieces: byBlack,
-    clock: displayBlack,
+    clock: clocks?.black ?? null,
+    since: clocks?.updatedAt ?? 0,
     active: isClockTicking && sideToMove === 'black',
   } as const
   const topIsBlack = orientation === 'white'
@@ -340,19 +429,7 @@ export default function GamePage() {
           <PlayerBar {...top} />
         </div>
         <div className="relative sm:col-start-1 sm:row-start-2">
-          <Chessground
-            config={{ viewOnly: true, coordinates: true, orientation }}
-            onReady={(api) => {
-              apiRef.current = api
-              api.set({
-                fen: displayFen,
-                lastMove:
-                  lastFrom && lastTo
-                    ? ([lastFrom, lastTo] as never)
-                    : undefined,
-              })
-            }}
-          />
+          <Chessground config={cgConfig} />
           <button
             type="button"
             onClick={() =>
@@ -383,57 +460,11 @@ export default function GamePage() {
           <PlayerBar {...bottom} />
         </div>
         <div className="flex flex-col w-full h-32 sm:w-48 sm:h-[var(--board-size)] sm:col-start-2 sm:row-start-2 bg-neutral-900 border border-neutral-800 rounded overflow-hidden">
-          <ol
-            ref={moveListRef}
-            className="flex-1 min-h-0 overflow-y-auto text-sm font-mono p-2 space-y-0.5"
-          >
-            {moves.length === 0 ? (
-              <li className="text-neutral-600 italic">no moves yet</li>
-            ) : (
-              Array.from({ length: Math.ceil(moves.length / 2) }, (_, i) => {
-                const wPly = i * 2 + 1
-                const bPly = i * 2 + 2
-                const wActive = effectiveViewPly === wPly
-                const bActive = effectiveViewPly === bPly
-                const isActiveRow = wActive || bActive
-                return (
-                  <li
-                    key={i}
-                    ref={isActiveRow ? activeRowRef : null}
-                    className="flex gap-2"
-                  >
-                    <span className="text-neutral-500 w-6 shrink-0 text-right">
-                      {i + 1}.
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => jumpTo(wPly)}
-                      className={`w-14 shrink-0 text-left px-1 rounded ${
-                        wActive
-                          ? 'bg-neutral-100 text-neutral-900'
-                          : 'text-neutral-100 hover:bg-neutral-800'
-                      }`}
-                    >
-                      {moves[i * 2]}
-                    </button>
-                    {moves[i * 2 + 1] !== undefined && (
-                      <button
-                        type="button"
-                        onClick={() => jumpTo(bPly)}
-                        className={`flex-1 text-left px-1 rounded ${
-                          bActive
-                            ? 'bg-neutral-100 text-neutral-900'
-                            : 'text-neutral-300 hover:bg-neutral-800'
-                        }`}
-                      >
-                        {moves[i * 2 + 1]}
-                      </button>
-                    )}
-                  </li>
-                )
-              })
-            )}
-          </ol>
+          <MoveList
+            moves={moves}
+            activePly={effectiveViewPly}
+            onJump={jumpTo}
+          />
           {showFollowToggle && (
             <button
               type="button"

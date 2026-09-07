@@ -5,18 +5,18 @@ import type { Config } from '@lichess-org/chessground/config'
 
 type Props = {
   config?: Config
-  onReady?: (api: Api) => void
   className?: string
 }
 
-export function Chessground({ config, onReady, className }: Props) {
+/** Chessground in a div. The board follows `config`, and `set` redraws on
+    every new object, so callers must hand over a memoized one. */
+export function Chessground({ config, className }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const apiRef = useRef<Api | null>(null)
 
   useEffect(() => {
     if (!ref.current) return
     apiRef.current = NativeChessground(ref.current, config)
-    onReady?.(apiRef.current)
     return () => apiRef.current?.destroy()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
