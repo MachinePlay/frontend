@@ -1,17 +1,25 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import {
   cancelTournament,
   fetchTournament,
+  fetchTournamentGames,
   isDeletedLogin,
   isNotFound,
   liveStreamUrl,
   profileUrl,
   runnerUrl,
+  type GameStatus,
   type LiveStreamEvent,
   type Standing,
   type TournamentDetail as TournamentDetailData,
+  type TournamentProgress,
 } from '../api'
 import {
   GameList,
@@ -23,9 +31,19 @@ import {
 } from '../components'
 import { useAuth } from '../auth-context'
 import { applyLiveEvent } from '../live'
-import { computeStandings } from '../standings'
-import { formatLabel, relativeTime } from '../format'
+import { formatDuration, formatLabel, relativeTime } from '../format'
 import NotFound from './NotFound'
+
+// One page of the pairings list. Small enough to stay responsive on a
+// 2000-game tournament, big enough that most tournaments fit in one page.
+const GAMES_PAGE = 50
+
+const FILTERS: { label: string; status?: GameStatus }[] = [
+  { label: 'all' },
+  { label: 'finished', status: 'ended' },
+  { label: 'pending', status: 'pending' },
+  { label: 'aborted', status: 'aborted' },
+]
 
 /** Who created the tournament. A deleted account is recorded as a neutral
     label rather than a handle, so it renders as plain text — there is no
@@ -103,6 +121,128 @@ function StandingsTable({
   )
 }
 
+/** How far along the tournament is, and roughly how much longer it has to run.
+    The bar is the games that have a result; aborted games are counted as done
+    (they will not be retried) but tinted apart from the played ones. */
+function ProgressBar({
+  progress,
+  etaSeconds,
+}: {
+  progress: TournamentProgress
+  etaSeconds: number | null | undefined
+}) {
+  const { total, ended, aborted, playing } = progress
+  if (total === 0) return null
+  const pct = (n: number) => `${(100 * n) / total}%`
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
+        <div className="bg-neutral-400" style={{ width: pct(ended) }} />
+        <div className="bg-amber-700/70" style={{ width: pct(aborted) }} />
+        <div className="bg-green-600 animate-pulse" style={{ width: pct(playing) }} />
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 text-xs text-neutral-500">
+        <span className="tabular-nums text-neutral-400">
+          {ended} / {total} played
+        </span>
+        {aborted > 0 && (
+          <span className="text-amber-500/80 tabular-nums">
+            {aborted} aborted
+          </span>
+        )}
+        {progress.pending > 0 && (
+          <span className="tabular-nums">{progress.pending} queued</span>
+        )}
+        {etaSeconds != null && (
+          <span className="ml-auto">~{formatDuration(etaSeconds)} left</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** The pairings list: paged, and filterable by status. Kept out of the detail
+    response — a tournament runs to thousands of games and the page polls. */
+function Pairings({
+  id,
+  total,
+  running,
+}: {
+  id: string
+  total: number
+  running: boolean
+}) {
+  const [status, setStatus] = useState<GameStatus | undefined>(undefined)
+  const { data, error, isFetching, fetchNextPage, hasNextPage } =
+    useInfiniteQuery({
+      queryKey: ['tournament-games', id, status ?? 'all'],
+      queryFn: ({ pageParam }) =>
+        fetchTournamentGames(id, {
+          status,
+          limit: GAMES_PAGE,
+          offset: pageParam,
+        }),
+      initialPageParam: 0,
+      getNextPageParam: (last, pages) => {
+        const loaded = pages.reduce((n, p) => n + p.games.length, 0)
+        return loaded < last.total ? loaded : undefined
+      },
+      // Results land continuously while the tournament runs, but slower than
+      // the header polls: a refetch here re-reads every page already loaded.
+      refetchInterval: running ? 15_000 : false,
+    })
+
+  const games = data?.pages.flatMap((p) => p.games) ?? []
+  const matching = data?.pages[0]?.total ?? total
+
+  return (
+    <Section
+      title={
+        <>
+          pairings
+          <span className="ml-2 text-neutral-400 normal-case">({matching})</span>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {FILTERS.map((f) => (
+            <button
+              key={f.label}
+              type="button"
+              onClick={() => setStatus(f.status)}
+              className={`rounded border px-2 py-0.5 text-xs transition-colors ${
+                status === f.status
+                  ? 'border-neutral-500 bg-neutral-800 text-neutral-100'
+                  : 'border-neutral-800 text-neutral-400 hover:border-neutral-600'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        {error ? (
+          <Hint>could not load the pairings</Hint>
+        ) : (
+          <>
+            <GameList games={games} />
+            {hasNextPage && (
+              <button
+                type="button"
+                disabled={isFetching}
+                onClick={() => void fetchNextPage()}
+                className="self-start text-sm text-neutral-400 hover:text-neutral-100 transition-colors disabled:opacity-40"
+              >
+                {isFetching ? 'loading…' : `load more (${games.length}/${matching})`}
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </Section>
+  )
+}
+
 function CancelControl({ id }: { id: string }) {
   const queryClient = useQueryClient()
   const [armed, setArmed] = useState(false)
@@ -167,8 +307,13 @@ export default function TournamentDetail() {
   })
 
   // Animate the live boards move-by-move (like the home dashboard). Only merge
-  // events for games already in this tournament — foreign games are ignored;
-  // the poll above adds new pairings, then their board starts updating here.
+  // events for boards already on screen — foreign games are ignored; the poll
+  // above adds newly-dispatched ones, then their board starts updating here.
+  //
+  // Merging locally is all this does: refetching on game_end instead would fire
+  // once per finished game, which on a short time control is several times a
+  // second. The polls are what refresh standings and the pairings list, and a
+  // few seconds' lag there is not worth the traffic.
   useEffect(() => {
     const es = new EventSource(liveStreamUrl())
     es.onmessage = (e) => {
@@ -176,10 +321,13 @@ export default function TournamentDetail() {
       queryClient.setQueryData<TournamentDetailData>(
         ['tournament', id],
         (prev) => {
-          if (!prev || !prev.games.some((g) => g.id === event.game_id)) {
+          if (!prev || !prev.live_games.some((g) => g.id === event.game_id)) {
             return prev
           }
-          return { ...prev, games: applyLiveEvent(prev.games, event) }
+          return {
+            ...prev,
+            live_games: applyLiveEvent(prev.live_games, event),
+          }
         },
       )
     }
@@ -208,10 +356,6 @@ export default function TournamentDetail() {
   const canCancel =
     t.status === 'running' &&
     (user?.login === t.created_by || user?.is_admin === true)
-  const live = t.games.filter((g) => g.status === 'playing')
-  // Derived from the games (which the SSE feed keeps fresh) so standings update
-  // the instant a game ends, not just on the next poll.
-  const standings = computeStandings(t.participants, t.games)
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-5">
@@ -222,8 +366,12 @@ export default function TournamentDetail() {
             <TournamentStatusPill status={t.status} />
           </h1>
           <p className="text-sm text-neutral-400">
-            {formatLabel(t.format)} · {t.games_per_pairing} game
-            {t.games_per_pairing === 1 ? '' : 's'}/pairing · {t.tc} · on{' '}
+            {formatLabel(t.format)} · {t.progress.total} game
+            {t.progress.total === 1 ? '' : 's'}
+            {/* Only worth spelling out when there is more than one pairing to
+                divide by — for a two-engine match the total says it all. */}
+            {t.participants.length > 2 && <> ({t.games_per_pairing}/pairing)</>}{' '}
+            · {t.tc} · on{' '}
             <Link
               to={runnerUrl(t.runner_id)}
               className="text-neutral-300 hover:text-neutral-100 transition-colors"
@@ -240,40 +388,35 @@ export default function TournamentDetail() {
         )}
       </div>
 
+      <ProgressBar progress={t.progress} etaSeconds={t.eta_seconds} />
+
       <Section title="standings">
         <StandingsTable
-          standings={standings}
+          standings={t.standings}
           headVersionId={t.gauntlet_head_version_id}
         />
       </Section>
 
-      {live.length > 0 && (
+      {t.live_games.length > 0 && (
         <Section
           title={
             <>
               live now
               <span className="ml-2 text-neutral-400 normal-case">
-                ({live.length})
+                ({t.live_games.length})
               </span>
             </>
           }
         >
-          <LiveGameGrid games={live} />
+          <LiveGameGrid games={t.live_games} />
         </Section>
       )}
 
-      <Section
-        title={
-          <>
-            pairings
-            <span className="ml-2 text-neutral-400 normal-case">
-              ({t.games.length})
-            </span>
-          </>
-        }
-      >
-        <GameList games={t.games} />
-      </Section>
+      <Pairings
+        id={t.id}
+        total={t.progress.total}
+        running={t.status === 'running'}
+      />
 
       <p className="text-xs text-neutral-600">
         created {relativeTime(t.created_at)}

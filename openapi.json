@@ -1169,6 +1169,89 @@
         }
       }
     },
+    "/tournament/{tournament_id}/games": {
+      "get": {
+        "tags": [
+          "Tournaments"
+        ],
+        "summary": "Get Tournament Games",
+        "description": "A page of the tournament's pairings, in schedule order.\n\nPaged and stripped of moves/pgn: a tournament runs to thousands of games\nand the page polls this while it is running.",
+        "operationId": "get_tournament_games",
+        "parameters": [
+          {
+            "name": "tournament_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Tournament Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/GameStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TournamentGamesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tournament/{tournament_id}/cancel": {
       "post": {
         "tags": [
@@ -3111,12 +3194,26 @@
             "type": "array",
             "title": "Standings"
           },
-          "games": {
+          "progress": {
+            "$ref": "#/components/schemas/TournamentProgress"
+          },
+          "live_games": {
             "items": {
               "$ref": "#/components/schemas/GameOut"
             },
             "type": "array",
-            "title": "Games"
+            "title": "Live Games"
+          },
+          "eta_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eta Seconds"
           },
           "created_at": {
             "type": "string",
@@ -3149,7 +3246,8 @@
           "gauntlet_head_version_id",
           "participants",
           "standings",
-          "games",
+          "progress",
+          "live_games",
           "created_at"
         ],
         "title": "TournamentDetailOut"
@@ -3187,6 +3285,133 @@
           "gauntlet"
         ],
         "title": "TournamentFormat"
+      },
+      "TournamentGameRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "white_name": {
+            "type": "string",
+            "title": "White Name"
+          },
+          "black_name": {
+            "type": "string",
+            "title": "Black Name"
+          },
+          "white_version": {
+            "type": "string",
+            "title": "White Version"
+          },
+          "black_version": {
+            "type": "string",
+            "title": "Black Version"
+          },
+          "white_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "White Version Id"
+          },
+          "black_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Black Version Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/GameStatus"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "white_name",
+          "black_name",
+          "white_version",
+          "black_version",
+          "status",
+          "result",
+          "created_at",
+          "ended_at"
+        ],
+        "title": "TournamentGameRow",
+        "description": "One pairing in the tournament's game list.\n\nDeliberately narrower than `GameOut`: no moves, pgn or fen. A tournament\nruns to thousands of games and the page polls while it is running, so the\nlist carries only what a row renders. The live boards (`live_games`, capped\nby the runner's slot count) still get the full `GameOut`."
+      },
+      "TournamentGamesOut": {
+        "properties": {
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/TournamentGameRow"
+            },
+            "type": "array",
+            "title": "Games"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "games",
+          "total"
+        ],
+        "title": "TournamentGamesOut",
+        "description": "A page of the pairings list, plus how many match the status filter."
       },
       "TournamentOut": {
         "properties": {
@@ -3289,6 +3514,40 @@
           "version"
         ],
         "title": "TournamentParticipantOut"
+      },
+      "TournamentProgress": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending"
+          },
+          "playing": {
+            "type": "integer",
+            "title": "Playing"
+          },
+          "ended": {
+            "type": "integer",
+            "title": "Ended"
+          },
+          "aborted": {
+            "type": "integer",
+            "title": "Aborted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "pending",
+          "playing",
+          "ended",
+          "aborted"
+        ],
+        "title": "TournamentProgress",
+        "description": "How many of the tournament's games sit in each state.\n\nCounted with one aggregate rather than by loading the games, so the page\nstays cheap however many pairings there are."
       },
       "TournamentStatus": {
         "type": "string",

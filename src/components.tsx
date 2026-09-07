@@ -458,7 +458,21 @@ export function TagPills({ tags }: { tags: string[] }) {
   )
 }
 
-export function GameRow({ game }: { game: Game }) {
+/** What a game row renders — the fields common to a full `Game` and the lean
+    `TournamentGameRow` the tournament pairings list is paged in as. */
+export type GameRowData = Pick<
+  Game,
+  | 'id'
+  | 'white_name'
+  | 'black_name'
+  | 'status'
+  | 'result'
+  | 'reason'
+  | 'created_at'
+  | 'ended_at'
+>
+
+export function GameRow({ game }: { game: GameRowData }) {
   return (
     <Link to={gameUrl(game.id)} className={cardClass}>
       <div className="flex items-center gap-2 text-sm">
@@ -481,7 +495,7 @@ export function GameRow({ game }: { game: Game }) {
   )
 }
 
-export function GameList({ games }: { games: Game[] }) {
+export function GameList({ games }: { games: GameRowData[] }) {
   if (games.length === 0) return <Hint>no games yet</Hint>
   return (
     <div className="flex flex-col gap-2">

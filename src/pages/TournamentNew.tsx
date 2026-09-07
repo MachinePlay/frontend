@@ -12,7 +12,14 @@ import {
 } from '../api'
 import { Hint, PrimaryButton, Section } from '../components'
 import { useEngineVersions } from '../useEngineVersions'
-import { DEFAULT_TC, TC_PRESETS } from '../tc'
+import { DEFAULT_TC, TC_PRESETS, estimateTournamentSeconds } from '../tc'
+import { formatDuration } from '../format'
+
+// Mirrors MAX_GAMES_PER_TOURNAMENT in backend/app/tournaments.py. The cap is on
+// the total, not on games/pairing: a round robin has C(n,2) pairings, so the
+// same per-pairing count is 500 games for a two-engine match and 14000 for
+// eight players.
+const MAX_GAMES = 2000
 
 const selectClass = 'bg-neutral-900 border border-neutral-800 rounded px-2 py-1'
 const fieldClass =
@@ -166,7 +173,20 @@ export default function TournamentNew() {
     new Set(entries.map((e) => `${e.engineId}|${e.versionId}`)).size !==
     entries.length
 
-  const games = pairingCount(format, entries.length) * gamesPerPairing
+  const pairings = pairingCount(format, entries.length)
+  const games = pairings * gamesPerPairing
+  // The cap is on the tournament's total games, so what one pairing may play
+  // depends on how many pairings there are.
+  const maxPerPairing = pairings > 0 ? Math.floor(MAX_GAMES / pairings) : MAX_GAMES
+  const tooManyGames = games > MAX_GAMES
+  // Rough wallclock, from the time control and how many games the runner plays
+  // at once — the number that says whether this finishes over lunch or in two
+  // days. The backend recomputes it for the tournament page.
+  const eta = estimateTournamentSeconds(
+    games,
+    tcSel,
+    selectedRunner?.max_games ?? 0,
+  )
 
   const updateEntry = (key: string, patch: Partial<Entry>) =>
     setEntries((prev) =>
@@ -178,6 +198,7 @@ export default function TournamentNew() {
     entries.length >= 2 &&
     !dup &&
     gamesPerPairing >= 1 &&
+    !tooManyGames &&
     selectedRunner?.online === true &&
     (format !== 'gauntlet' || effectiveHeadKey !== '')
 
@@ -251,16 +272,17 @@ export default function TournamentNew() {
             <input
               type="number"
               min={1}
-              max={20}
+              max={maxPerPairing}
               className={`${fieldClass} w-20`}
               value={gamesPerPairing}
               onChange={(e) =>
-                setGamesPerPairing(
-                  Math.max(1, Math.min(20, Number(e.target.value) || 1)),
-                )
+                setGamesPerPairing(Math.max(1, Number(e.target.value) || 1))
               }
             />
-            <span className="text-neutral-600 text-xs">colors alternate</span>
+            <span className="text-neutral-600 text-xs">
+              colors alternate · up to {maxPerPairing} for {pairings} pairing
+              {pairings === 1 ? '' : 's'}
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -358,9 +380,22 @@ export default function TournamentNew() {
         {entries.length >= 2 && !dup && (
           <span className="text-xs text-neutral-500">
             {games} game{games === 1 ? '' : 's'} on {selectedRunner?.name ?? '—'}
+            {selectedRunner && (
+              <span className="text-neutral-600">
+                {' '}
+                ({selectedRunner.max_games} at a time)
+              </span>
+            )}
+            {eta !== null && <> · ~{formatDuration(eta)}</>}
           </span>
         )}
       </div>
+      {tooManyGames && (
+        <span className="text-amber-500/80 text-xs">
+          {games} games is over the {MAX_GAMES} limit — at most {maxPerPairing}{' '}
+          per pairing with {pairings} pairing{pairings === 1 ? '' : 's'}
+        </span>
+      )}
       {error && <span className="text-red-400 text-xs">{error}</span>}
     </div>
   )

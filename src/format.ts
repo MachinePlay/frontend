@@ -34,3 +34,19 @@ export function formatClock(s: number): string {
   }
   return s.toFixed(1)
 }
+
+/** A coarse wallclock duration for ETAs — "~2h 40m", "~15m", "~3d". Rounded
+    hard on purpose: the estimate behind it is not worth more precision. */
+export function formatDuration(seconds: number): string {
+  const m = Math.round(seconds / 60)
+  if (m < 1) return '<1m'
+  if (m < 60) return `${m}m`
+  const h = Math.floor(m / 60)
+  if (h < 24) {
+    const rem = m % 60
+    return rem === 0 ? `${h}h` : `${h}h ${rem}m`
+  }
+  const d = Math.floor(h / 24)
+  const remH = h % 24
+  return remH === 0 ? `${d}d` : `${d}d ${remH}h`
+}

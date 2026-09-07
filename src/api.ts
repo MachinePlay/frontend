@@ -7,6 +7,7 @@ import type {
   EngineVersionUpdateRequest,
   GameDetailOut,
   GameOut,
+  GameStatus,
   HardwareInfo,
   PendingSignupOut,
   RunnerLiveEvent,
@@ -17,8 +18,11 @@ import type {
   TokenOut,
   TournamentCreateRequest,
   TournamentDetailOut,
+  TournamentGameRow as TournamentGameRowType,
+  TournamentGamesOut,
   TournamentOut,
   TournamentParticipantOut,
+  TournamentProgress as TournamentProgressType,
   StandingRow,
   UserOut,
   UserProfileOut,
@@ -242,8 +246,23 @@ export const fetchTournaments = (): Promise<Tournament[]> =>
 export const fetchTournament = (id: string): Promise<TournamentDetail> =>
   request(`/tournament/${id}`)
 
+// One page of a tournament's pairings, in schedule order. Separate from the
+// detail because a tournament runs to thousands of games: the detail carries
+// only standings, progress and the live boards.
+export const fetchTournamentGames = (
+  id: string,
+  opts: { status?: GameStatus; limit: number; offset: number },
+): Promise<TournamentGames> => {
+  const params = new URLSearchParams({
+    limit: String(opts.limit),
+    offset: String(opts.offset),
+  })
+  if (opts.status) params.set('status', opts.status)
+  return request(`/tournament/${id}/games?${params}`)
+}
+
 // Create a tournament and start dispatching its pairings; returns the detail
-// (participants + standings + games). `tc`/`gauntletHeadId` are optional.
+// (participants + standings + progress). `tc`/`gauntletHeadId` are optional.
 export const createTournament = (
   req: TournamentCreateRequest,
 ): Promise<TournamentDetail> => request('/tournament', post(req))
@@ -299,7 +318,10 @@ export type PendingSignup = PendingSignupOut
 export type UserProfile = UserProfileOut
 export type Tournament = TournamentOut
 export type TournamentDetail = TournamentDetailOut
+export type TournamentGames = TournamentGamesOut
+export type TournamentGameRow = TournamentGameRowType
 export type TournamentParticipant = TournamentParticipantOut
+export type TournamentProgress = TournamentProgressType
 export type Standing = StandingRow
 
 export type {

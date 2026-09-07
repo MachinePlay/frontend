@@ -1009,10 +1009,15 @@ export type TournamentDetailOut = {
      * Standings
      */
     standings: Array<StandingRow>;
+    progress: TournamentProgress;
     /**
-     * Games
+     * Live Games
      */
-    games: Array<GameOut>;
+    live_games: Array<GameOut>;
+    /**
+     * Eta Seconds
+     */
+    eta_seconds?: number | null;
     /**
      * Created At
      */
@@ -1041,6 +1046,80 @@ export type TournamentEntry = {
  * TournamentFormat
  */
 export type TournamentFormat = 'round_robin' | 'gauntlet';
+
+/**
+ * TournamentGameRow
+ *
+ * One pairing in the tournament's game list.
+ *
+ * Deliberately narrower than `GameOut`: no moves, pgn or fen. A tournament
+ * runs to thousands of games and the page polls while it is running, so the
+ * list carries only what a row renders. The live boards (`live_games`, capped
+ * by the runner's slot count) still get the full `GameOut`.
+ */
+export type TournamentGameRow = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * White Name
+     */
+    white_name: string;
+    /**
+     * Black Name
+     */
+    black_name: string;
+    /**
+     * White Version
+     */
+    white_version: string;
+    /**
+     * Black Version
+     */
+    black_version: string;
+    /**
+     * White Version Id
+     */
+    white_version_id?: string | null;
+    /**
+     * Black Version Id
+     */
+    black_version_id?: string | null;
+    status: GameStatus;
+    /**
+     * Result
+     */
+    result: string | null;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Ended At
+     */
+    ended_at: string | null;
+};
+
+/**
+ * TournamentGamesOut
+ *
+ * A page of the pairings list, plus how many match the status filter.
+ */
+export type TournamentGamesOut = {
+    /**
+     * Games
+     */
+    games: Array<TournamentGameRow>;
+    /**
+     * Total
+     */
+    total: number;
+};
 
 /**
  * TournamentOut
@@ -1108,6 +1187,37 @@ export type TournamentParticipantOut = {
      * Version
      */
     version: string;
+};
+
+/**
+ * TournamentProgress
+ *
+ * How many of the tournament's games sit in each state.
+ *
+ * Counted with one aggregate rather than by loading the games, so the page
+ * stays cheap however many pairings there are.
+ */
+export type TournamentProgress = {
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Pending
+     */
+    pending: number;
+    /**
+     * Playing
+     */
+    playing: number;
+    /**
+     * Ended
+     */
+    ended: number;
+    /**
+     * Aborted
+     */
+    aborted: number;
 };
 
 /**
@@ -2025,6 +2135,49 @@ export type GetTournamentResponses = {
 };
 
 export type GetTournamentResponse = GetTournamentResponses[keyof GetTournamentResponses];
+
+export type GetTournamentGamesData = {
+    body?: never;
+    path: {
+        /**
+         * Tournament Id
+         */
+        tournament_id: string;
+    };
+    query?: {
+        /**
+         * Status
+         */
+        status?: GameStatus | null;
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
+    url: '/tournament/{tournament_id}/games';
+};
+
+export type GetTournamentGamesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetTournamentGamesError = GetTournamentGamesErrors[keyof GetTournamentGamesErrors];
+
+export type GetTournamentGamesResponses = {
+    /**
+     * Successful Response
+     */
+    200: TournamentGamesOut;
+};
+
+export type GetTournamentGamesResponse = GetTournamentGamesResponses[keyof GetTournamentGamesResponses];
 
 export type CancelTournamentData = {
     body?: never;
