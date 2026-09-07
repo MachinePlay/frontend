@@ -378,7 +378,8 @@ export default function TournamentDetail() {
             >
               runner
             </Link>{' '}
-            · by <Creator login={t.created_by} />
+            · {t.book ? (t.book_name ?? t.book) : 'no book'} · by{' '}
+            <Creator login={t.created_by} />
           </p>
         </div>
         {canCancel && (

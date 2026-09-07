@@ -1300,6 +1300,32 @@
         }
       }
     },
+    "/book": {
+      "get": {
+        "tags": [
+          "Opening books"
+        ],
+        "summary": "List Books",
+        "description": "The opening books a game or tournament can be dealt its start from.\n\nPass a book's `slug` as `book` when creating one, or `\"none\"` to play from\nthe initial position.",
+        "operationId": "list_books",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BookOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Books"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/stream/game/{game_id}": {
       "get": {
         "tags": [
@@ -1510,6 +1536,45 @@
           "last_used_at"
         ],
         "title": "ApiTokenOut"
+      },
+      "BookOut": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "plies": {
+            "type": "integer",
+            "title": "Plies"
+          },
+          "lines": {
+            "type": "integer",
+            "title": "Lines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug",
+          "name",
+          "description",
+          "source",
+          "plies",
+          "lines"
+        ],
+        "title": "BookOut",
+        "description": "One opening book in the catalog. `lines` is a count, not the lines\nthemselves: the browser only needs to name and size the choice."
       },
       "EngineDetailOut": {
         "properties": {
@@ -2070,6 +2135,22 @@
             ],
             "title": "Tournament Id"
           },
+          "book": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Book"
+          },
+          "book_plies": {
+            "type": "integer",
+            "title": "Book Plies",
+            "default": 0
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -2331,6 +2412,22 @@
               }
             ],
             "title": "Tournament Id"
+          },
+          "book": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Book"
+          },
+          "book_plies": {
+            "type": "integer",
+            "title": "Book Plies",
+            "default": 0
           },
           "created_at": {
             "type": "string",
@@ -2997,6 +3094,11 @@
               }
             ],
             "title": "Tc"
+          },
+          "book": {
+            "type": "string",
+            "title": "Book",
+            "default": "perfect2021"
           }
         },
         "type": "object",
@@ -3123,6 +3225,11 @@
               }
             ],
             "title": "Tc"
+          },
+          "book": {
+            "type": "string",
+            "title": "Book",
+            "default": "perfect2021"
           }
         },
         "type": "object",
@@ -3179,6 +3286,28 @@
               }
             ],
             "title": "Gauntlet Head Version Id"
+          },
+          "book": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Book"
+          },
+          "book_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Book Name"
           },
           "participants": {
             "items": {
@@ -3785,6 +3914,10 @@
     {
       "name": "Tournaments",
       "description": "Round-robin and gauntlet tournaments: create one on a runner and watch its pairings play out with live standings."
+    },
+    {
+      "name": "Opening books",
+      "description": "The opening lines games are dealt to start from, so two deterministic engines don't replay one game all tournament."
     },
     {
       "name": "Live streaming",

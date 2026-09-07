@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth-context'
 import {
   createTournament,
+  fetchBooks,
   fetchEngines,
   fetchRunners,
   tournamentUrl,
@@ -20,6 +21,10 @@ import { formatDuration } from '../format'
 // same per-pairing count is 500 games for a two-engine match and 14000 for
 // eight players.
 const MAX_GAMES = 2000
+
+// Mirrors books.NO_BOOK in backend/app/books.py: the value that means "start
+// every game from the initial position" rather than naming a book.
+const NO_BOOK = 'none'
 
 const selectClass = 'bg-neutral-900 border border-neutral-800 rounded px-2 py-1'
 const fieldClass =
@@ -132,6 +137,12 @@ export default function TournamentNew() {
     queryFn: fetchRunners,
     staleTime: 5_000,
   })
+  // Books only change on a deploy.
+  const { data: books = [] } = useQuery({
+    queryKey: ['books'],
+    queryFn: fetchBooks,
+    staleTime: Infinity,
+  })
 
   const [name, setName] = useState('')
   const [format, setFormat] = useState<TournamentFormat>('round_robin')
@@ -141,6 +152,9 @@ export default function TournamentNew() {
   const [gamesPerPairing, setGamesPerPairing] = useState(2)
   const [runnerSel, setRunnerSel] = useState('')
   const [tcSel, setTcSel] = useState(DEFAULT_TC)
+  // '' until the catalog loads, then the first book — a tournament without one
+  // is two deterministic engines replaying a single game.
+  const [bookSel, setBookSel] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -153,6 +167,9 @@ export default function TournamentNew() {
       mkEntry(engines[Math.min(1, engines.length - 1)].id),
     ])
   }
+
+  const book = bookSel || books[0]?.slug || NO_BOOK
+  const selectedBook = books.find((b) => b.slug === book)
 
   const onlineRunners = runners.filter((r) => r.online)
   const runnerId =
@@ -221,6 +238,7 @@ export default function TournamentNew() {
         games_per_pairing: gamesPerPairing,
         runner_id: runnerId,
         tc: tcSel,
+        book,
       })
       await queryClient.invalidateQueries({ queryKey: ['tournaments'] })
       navigate(tournamentUrl(detail.id))
@@ -317,6 +335,30 @@ export default function TournamentNew() {
               ))}
             </select>
           </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-neutral-400 w-24 shrink-0">openings</span>
+            <select
+              className={`${selectClass} flex-1 min-w-0`}
+              value={book}
+              onChange={(e) => setBookSel(e.target.value)}
+              title="opening book each pairing is dealt from"
+            >
+              {books.map((b) => (
+                <option key={b.slug} value={b.slug}>
+                  {b.name}
+                </option>
+              ))}
+              <option value={NO_BOOK}>none — always from the start</option>
+            </select>
+          </div>
+          <Hint>
+            {selectedBook
+              ? `${selectedBook.lines} lines, ${selectedBook.plies} plies deep. ` +
+                'Each is played twice, once from each side.'
+              : 'Without a book, two engines that always pick the same move ' +
+                'replay one game per colour — the tournament tells you nothing.'}
+          </Hint>
         </div>
       </Section>
 

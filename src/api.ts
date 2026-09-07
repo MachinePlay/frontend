@@ -1,5 +1,6 @@
 import type {
   ApiTokenOut,
+  BookOut,
   EngineDetailOut,
   EngineOut,
   EngineUpdateRequest,
@@ -240,6 +241,10 @@ export const startGame = async (req: {
 export const cancelGame = (id: string): Promise<unknown> =>
   request(`/game/${id}/cancel`, post())
 
+// The opening books a game or tournament can be dealt its starting line from.
+// Static for the life of a deploy, so callers cache it hard.
+export const fetchBooks = (): Promise<Book[]> => request('/book')
+
 export const fetchTournaments = (): Promise<Tournament[]> =>
   request('/tournament')
 
@@ -316,6 +321,7 @@ export type StreamEvent = SseStreamResponse
 export type ApiToken = ApiTokenOut
 export type PendingSignup = PendingSignupOut
 export type UserProfile = UserProfileOut
+export type Book = BookOut
 export type Tournament = TournamentOut
 export type TournamentDetail = TournamentDetailOut
 export type TournamentGames = TournamentGamesOut

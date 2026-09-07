@@ -55,6 +55,8 @@ export function useGame(id: string | undefined) {
   const [blackVersion, setBlackVersion] = useState<string | null>(null)
   const [tc, setTc] = useState<string | null>(null)
   const [runnerId, setRunnerId] = useState<string | null>(null)
+  // How many leading moves came from the opening book rather than an engine.
+  const [bookPlies, setBookPlies] = useState(0)
   const [moves, setMoves] = useState<string[]>([])
   // Parallel to `moves`: what each mover's search reported. The live search and
   // the UCI transcript are stream-only; a finished game keeps the tail of the
@@ -80,6 +82,7 @@ export function useGame(id: string | undefined) {
         setBlackVersion(g.black_version)
         setTc(g.tc ?? null)
         setRunnerId(g.runner_id ?? null)
+        setBookPlies(g.book_plies ?? 0)
         setMoves(g.moves)
         setEvals(g.evals ?? [])
         setUciLines(tag(g.uci_tail ?? [], nextSeq))
@@ -169,6 +172,7 @@ export function useGame(id: string | undefined) {
     blackVersion,
     tc,
     runnerId,
+    bookPlies,
     moves,
     evals,
     liveSearch,

@@ -27,6 +27,39 @@ export type ApiTokenOut = {
 };
 
 /**
+ * BookOut
+ *
+ * One opening book in the catalog. `lines` is a count, not the lines
+ * themselves: the browser only needs to name and size the choice.
+ */
+export type BookOut = {
+    /**
+     * Slug
+     */
+    slug: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Plies
+     */
+    plies: number;
+    /**
+     * Lines
+     */
+    lines: number;
+};
+
+/**
  * EngineDetailOut
  */
 export type EngineDetailOut = {
@@ -366,6 +399,14 @@ export type GameDetailOut = {
      */
     tournament_id?: string | null;
     /**
+     * Book
+     */
+    book?: string | null;
+    /**
+     * Book Plies
+     */
+    book_plies?: number;
+    /**
      * Created At
      */
     created_at: string;
@@ -487,6 +528,14 @@ export type GameOut = {
      * Tournament Id
      */
     tournament_id?: string | null;
+    /**
+     * Book
+     */
+    book?: string | null;
+    /**
+     * Book Plies
+     */
+    book_plies?: number;
     /**
      * Created At
      */
@@ -879,6 +928,10 @@ export type StartGameRequest = {
      * Tc
      */
     tc?: string | null;
+    /**
+     * Book
+     */
+    book?: string;
 };
 
 /**
@@ -965,6 +1018,10 @@ export type TournamentCreateRequest = {
      * Tc
      */
     tc?: string | null;
+    /**
+     * Book
+     */
+    book?: string;
 };
 
 /**
@@ -1001,6 +1058,14 @@ export type TournamentDetailOut = {
      * Gauntlet Head Version Id
      */
     gauntlet_head_version_id: string | null;
+    /**
+     * Book
+     */
+    book?: string | null;
+    /**
+     * Book Name
+     */
+    book_name?: string | null;
     /**
      * Participants
      */
@@ -2212,6 +2277,24 @@ export type CancelTournamentResponses = {
 };
 
 export type CancelTournamentResponse = CancelTournamentResponses[keyof CancelTournamentResponses];
+
+export type ListBooksData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/book';
+};
+
+export type ListBooksResponses = {
+    /**
+     * Response List Books
+     *
+     * Successful Response
+     */
+    200: Array<BookOut>;
+};
+
+export type ListBooksResponse = ListBooksResponses[keyof ListBooksResponses];
 
 export type SseStreamData = {
     body?: never;

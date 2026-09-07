@@ -138,19 +138,27 @@ function PlayerBar({
 
 /** One numbered pair of plies. Memoized because a 400-ply game re-renders its
     list on every incoming move, and only the touched rows actually change. */
+// Book moves are shown, not hidden — they are part of the game — but dimmed,
+// so what an engine actually chose is never mistaken for what it was handed.
+const bookClass = 'text-neutral-500 italic'
+
 const MoveRow = memo(function MoveRow({
   number,
   white,
   black,
   activeSide,
+  bookPlies,
   onJump,
 }: {
   number: number
   white: string
   black: string | undefined
   activeSide: 'white' | 'black' | null
+  bookPlies: number
   onJump: (ply: number) => void
 }) {
+  const whiteBook = number * 2 - 1 <= bookPlies
+  const blackBook = number * 2 <= bookPlies
   return (
     <li data-active={activeSide !== null} className="flex gap-2">
       <span className="text-neutral-500 w-6 shrink-0 text-right">{number}.</span>
@@ -159,10 +167,11 @@ const MoveRow = memo(function MoveRow({
       <button
         type="button"
         onClick={() => onJump(number * 2 - 1)}
+        title={whiteBook ? 'from the opening book' : undefined}
         className={`flex-1 basis-0 min-w-0 text-left px-1 rounded ${
           activeSide === 'white'
             ? 'bg-neutral-100 text-neutral-900'
-            : 'text-neutral-100 hover:bg-neutral-800'
+            : `hover:bg-neutral-800 ${whiteBook ? bookClass : 'text-neutral-100'}`
         }`}
       >
         {white}
@@ -171,10 +180,11 @@ const MoveRow = memo(function MoveRow({
         <button
           type="button"
           onClick={() => onJump(number * 2)}
+          title={blackBook ? 'from the opening book' : undefined}
           className={`flex-1 basis-0 min-w-0 text-left px-1 rounded ${
             activeSide === 'black'
               ? 'bg-neutral-100 text-neutral-900'
-              : 'text-neutral-300 hover:bg-neutral-800'
+              : `hover:bg-neutral-800 ${blackBook ? bookClass : 'text-neutral-300'}`
           }`}
         >
           {black}
@@ -189,10 +199,12 @@ const MoveRow = memo(function MoveRow({
 const MoveList = memo(function MoveList({
   moves,
   activePly,
+  bookPlies,
   onJump,
 }: {
   moves: string[]
   activePly: number
+  bookPlies: number
   onJump: (ply: number) => void
 }) {
   const listRef = useRef<HTMLOListElement | null>(null)
@@ -217,6 +229,7 @@ const MoveList = memo(function MoveList({
             number={i + 1}
             white={moves[i * 2]}
             black={moves[i * 2 + 1]}
+            bookPlies={bookPlies}
             activeSide={
               activePly === i * 2 + 1
                 ? 'white'
@@ -377,6 +390,7 @@ export default function GamePage() {
     blackVersion,
     tc,
     runnerId,
+    bookPlies,
     moves,
     evals,
     liveSearch,
@@ -635,6 +649,7 @@ export default function GamePage() {
           {tab === 'moves' && (
             <MoveList
               moves={moves}
+              bookPlies={bookPlies}
               activePly={effectiveViewPly}
               onJump={jumpTo}
             />
