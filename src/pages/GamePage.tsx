@@ -354,8 +354,6 @@ function GameStatusPanel({
 
   if (status === null) return null
 
-  // "normal" is fastchess's Termination for a plain finish — noise, hide it.
-  const detail = reason && reason !== 'normal' ? reason : null
   return (
     <div className="flex flex-col items-center gap-0.5 text-sm">
       {status === 'aborted' ? (
@@ -363,7 +361,7 @@ function GameStatusPanel({
       ) : (
         <span className="text-neutral-100 font-medium">{result ?? '*'}</span>
       )}
-      {detail && <span className="text-neutral-500 text-xs">{detail}</span>}
+      {reason && <span className="text-neutral-500 text-xs">{reason}</span>}
     </div>
   )
 }

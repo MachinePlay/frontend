@@ -459,9 +459,6 @@ export function TagPills({ tags }: { tags: string[] }) {
 }
 
 export function GameRow({ game }: { game: Game }) {
-  // fastchess reports "normal" for a plain finish — noise, hide it.
-  const reason =
-    game.reason && game.reason !== 'normal' ? game.reason : null
   return (
     <Link to={gameUrl(game.id)} className={cardClass}>
       <div className="flex items-center gap-2 text-sm">
@@ -478,7 +475,7 @@ export function GameRow({ game }: { game: Game }) {
       </div>
       <div className="text-xs text-neutral-500 mt-0.5">
         {relativeTime(game.ended_at ?? game.created_at)}
-        {reason && <> · {reason}</>}
+        {game.reason && <> · {game.reason}</>}
       </div>
     </Link>
   )
