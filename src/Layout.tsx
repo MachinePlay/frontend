@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router'
 import { useAuth } from './auth-context'
+import { usePageviews } from './usePageviews'
 
 function navLinkClass({ isActive }: { isActive: boolean }) {
   return [
@@ -54,6 +55,8 @@ function AuthSlot() {
 }
 
 export default function Layout() {
+  usePageviews()
+
   return (
     <div className="min-h-dvh flex flex-col bg-neutral-950 text-neutral-100">
       <header className="border-b border-neutral-800">
