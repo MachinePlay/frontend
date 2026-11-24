@@ -26,12 +26,18 @@ import {
   Hint,
   LiveGameGrid,
   LoadError,
+  RatingDelta,
   Section,
   TournamentStatusPill,
 } from '../components'
 import { useAuth } from '../auth-context'
 import { applyLiveEvent } from '../live'
-import { formatDuration, formatLabel, relativeTime } from '../format'
+import {
+  formatDuration,
+  formatLabel,
+  formatRating,
+  relativeTime,
+} from '../format'
 import NotFound from './NotFound'
 
 const GAMES_PAGE = 50
@@ -60,9 +66,11 @@ function Creator({ login }: { login: string }) {
 function StandingsTable({
   standings,
   headVersionId,
+  rated,
 }: {
   standings: Standing[]
   headVersionId: string | null
+  rated: boolean
 }) {
   if (standings.length === 0) return <Hint>no results yet</Hint>
   return (
@@ -77,6 +85,12 @@ function StandingsTable({
             <th className="py-1 px-2 font-normal text-right">D</th>
             <th className="py-1 px-2 font-normal text-right">L</th>
             <th className="py-1 pl-2 font-normal text-right">score</th>
+            {rated && (
+              <>
+                <th className="py-1 pl-4 font-normal text-right">rating</th>
+                <th className="py-1 pl-2 font-normal text-right">±</th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -108,6 +122,23 @@ function StandingsTable({
               <td className="py-1.5 pl-2 text-right tabular-nums font-medium">
                 {row.score}
               </td>
+              {rated && (
+                <>
+                  <td
+                    className="py-1.5 pl-4 text-right tabular-nums text-neutral-300"
+                    title={
+                      row.rating
+                        ? `rating deviation ${Math.round(row.rating.phi)}`
+                        : undefined
+                    }
+                  >
+                    {row.rating ? formatRating(row.rating) : '—'}
+                  </td>
+                  <td className="py-1.5 pl-2 text-right">
+                    <RatingDelta delta={row.rating_delta ?? 0} />
+                  </td>
+                </>
+              )}
             </tr>
           ))}
         </tbody>
@@ -351,7 +382,8 @@ export default function TournamentDetail() {
             {formatLabel(t.format)} · {t.progress.total} game
             {t.progress.total === 1 ? '' : 's'}
             {t.participants.length > 2 && <> ({t.games_per_pairing}/pairing)</>}{' '}
-            · {t.tc} · on{' '}
+            · {t.tc} ·{' '}
+            {t.rated ? `rated ${t.rating_category}` : 'unrated'} · on{' '}
             <Link
               to={runnerUrl(t.runner_id)}
               className="text-neutral-300 hover:text-neutral-100 transition-colors"
@@ -375,6 +407,7 @@ export default function TournamentDetail() {
         <StandingsTable
           standings={t.standings}
           headVersionId={t.gauntlet_head_version_id}
+          rated={t.rated}
         />
       </Section>
 

@@ -1,7 +1,20 @@
-import type { TournamentFormat } from './api'
+import type { Rating, TournamentFormat } from './api'
 
 export const formatLabel = (f: TournamentFormat): string =>
   f === 'round_robin' ? 'round robin' : 'gauntlet'
+
+// Lichess's cut-off for a rating it marks provisional.
+const PROVISIONAL_RD = 110
+
+export const formatRating = (r: Rating): string =>
+  `${Math.round(r.mu)}${r.phi > PROVISIONAL_RD ? '?' : ''}`
+
+export function formatDelta(delta: number): string {
+  const n = Math.round(delta)
+  if (n > 0) return `+${n}`
+  if (n < 0) return `−${-n}`
+  return '±0'
+}
 
 export function relativeTime(iso: string): string {
   const t = new Date(iso).getTime()

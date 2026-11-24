@@ -1,3 +1,5 @@
+import type { RatingCategory } from './api'
+
 // "base+inc" in seconds, shared by the new-game and new-tournament forms.
 export const TC_PRESETS = [
   { value: '10+0.1', label: '10s + 0.1' },
@@ -8,6 +10,15 @@ export const TC_PRESETS = [
 ]
 
 export const DEFAULT_TC = '30+0.3'
+
+// Mirrors `category` in backend/app/ratings.py.
+export function ratingCategory(tc: string): RatingCategory {
+  const [base, inc] = tc.split('+')
+  const estimate = Number(base) + 40 * Number(inc ?? 0)
+  if (estimate < 60) return 'bullet'
+  if (estimate < 300) return 'blitz'
+  return 'rapid'
+}
 
 // Mirrors `estimate_game_seconds` in backend/app/tournaments.py, for the form
 // that runs before the tournament exists.

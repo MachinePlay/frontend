@@ -18,12 +18,14 @@ import {
   tournamentUrl,
   type Engine,
   type Game,
+  type Rating,
+  type RatingCategory,
   type Runner,
   type RunnerLive,
   type Tournament,
   type TournamentStatus,
 } from './api'
-import { formatLabel, relativeTime } from './format'
+import { formatDelta, formatLabel, formatRating, relativeTime } from './format'
 
 export function Section({
   title,
@@ -441,6 +443,47 @@ export function TagPills({ tags }: { tags: string[] }) {
   )
 }
 
+const RATING_CATEGORIES: RatingCategory[] = ['bullet', 'blitz', 'rapid']
+
+/** One chip per category the version has rated games in. */
+export function RatingChips({
+  ratings,
+}: {
+  ratings: { [key in RatingCategory]?: Rating }
+}) {
+  const rated = RATING_CATEGORIES.flatMap((c) => {
+    const r = ratings[c]
+    return r ? [{ category: c, rating: r }] : []
+  })
+  if (rated.length === 0) return null
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      {rated.map(({ category, rating }) => (
+        <span
+          key={category}
+          title={`${rating.games} rated ${rating.games === 1 ? 'game' : 'games'}, rating deviation ${Math.round(rating.phi)}`}
+          className="inline-flex items-baseline gap-1 rounded border border-neutral-800 bg-neutral-900 px-1.5 py-0.5 text-xs"
+        >
+          <span className="text-neutral-500">{category}</span>
+          <span className="tabular-nums text-neutral-200">
+            {formatRating(rating)}
+          </span>
+          <span className="tabular-nums text-neutral-600">
+            ±{Math.round(rating.phi)}
+          </span>
+        </span>
+      ))}
+    </span>
+  )
+}
+
+export function RatingDelta({ delta }: { delta: number }) {
+  const n = Math.round(delta)
+  const tone =
+    n > 0 ? 'text-green-400' : n < 0 ? 'text-red-400' : 'text-neutral-500'
+  return <span className={`tabular-nums ${tone}`}>{formatDelta(delta)}</span>
+}
+
 /** Fields shared by `Game` and the lean `TournamentGameRow`. */
 export type GameRowData = Pick<
   Game,
@@ -553,6 +596,11 @@ export function EngineRow({ engine }: { engine: Engine }) {
       {engine.description && (
         <div className="text-xs text-neutral-500 mt-0.5">
           {engine.description}
+        </div>
+      )}
+      {engine.ratings && Object.keys(engine.ratings).length > 0 && (
+        <div className="mt-1.5">
+          <RatingChips ratings={engine.ratings} />
         </div>
       )}
       {engine.tags.length > 0 && (

@@ -146,6 +146,12 @@ export type EngineOut = {
      * Version Count
      */
     version_count?: number;
+    /**
+     * Ratings
+     */
+    ratings?: {
+        [key in RatingCategory]?: Rating;
+    };
 };
 
 /**
@@ -242,6 +248,12 @@ export type EngineVersionOut = {
      * Image Digest
      */
     image_digest: string;
+    /**
+     * Ratings
+     */
+    ratings: {
+        [key in RatingCategory]?: Rating;
+    };
     /**
      * Created At
      */
@@ -393,6 +405,12 @@ export type GameDetailOut = {
      */
     tournament_id?: string | null;
     /**
+     * Rated
+     */
+    rated?: boolean;
+    white_rating?: RatingChange | null;
+    black_rating?: RatingChange | null;
+    /**
      * Book
      */
     book?: string | null;
@@ -522,6 +540,12 @@ export type GameOut = {
      * Tournament Id
      */
     tournament_id?: string | null;
+    /**
+     * Rated
+     */
+    rated?: boolean;
+    white_rating?: RatingChange | null;
+    black_rating?: RatingChange | null;
     /**
      * Book
      */
@@ -688,6 +712,59 @@ export type PendingSignupOut = {
      * Avatar Url
      */
     avatar_url: string;
+};
+
+/**
+ * Rating
+ *
+ * Glicko-2 on the display scale: `phi` is the rating deviation (RD).
+ */
+export type Rating = {
+    /**
+     * Mu
+     */
+    mu: number;
+    /**
+     * Phi
+     */
+    phi: number;
+    /**
+     * Sigma
+     */
+    sigma: number;
+    /**
+     * Games
+     */
+    games: number;
+};
+
+/**
+ * RatingCategory
+ */
+export type RatingCategory = 'bullet' | 'blitz' | 'rapid';
+
+/**
+ * RatingChange
+ */
+export type RatingChange = {
+    /**
+     * Before
+     */
+    before: number;
+    /**
+     * After
+     */
+    after: number;
+};
+
+/**
+ * RebuildRatingsOut
+ */
+export type RebuildRatingsOut = {
+    /**
+     * Games
+     */
+    games: number;
 };
 
 /**
@@ -885,6 +962,11 @@ export type StandingRow = {
      * Score
      */
     score: number;
+    rating?: Rating | null;
+    /**
+     * Rating Delta
+     */
+    rating_delta?: number | null;
 };
 
 /**
@@ -983,6 +1065,10 @@ export type TournamentCreateRequest = {
     name: string;
     format: TournamentFormat;
     /**
+     * Rated
+     */
+    rated?: boolean;
+    /**
      * Entries
      */
     entries: Array<TournamentEntry>;
@@ -1022,6 +1108,11 @@ export type TournamentDetailOut = {
     name: string;
     format: TournamentFormat;
     status: TournamentStatus;
+    /**
+     * Rated
+     */
+    rated: boolean;
+    rating_category: RatingCategory;
     /**
      * Runner Id
      */
@@ -1182,6 +1273,10 @@ export type TournamentOut = {
     name: string;
     format: TournamentFormat;
     status: TournamentStatus;
+    /**
+     * Rated
+     */
+    rated: boolean;
     /**
      * Runner Id
      */
@@ -2268,6 +2363,22 @@ export type ListBooksResponses = {
 };
 
 export type ListBooksResponse = ListBooksResponses[keyof ListBooksResponses];
+
+export type RebuildRatingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/admin/ratings/rebuild';
+};
+
+export type RebuildRatingsResponses = {
+    /**
+     * Successful Response
+     */
+    200: RebuildRatingsOut;
+};
+
+export type RebuildRatingsResponse = RebuildRatingsResponses[keyof RebuildRatingsResponses];
 
 export type SseStreamData = {
     body?: never;

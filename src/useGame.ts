@@ -3,6 +3,7 @@ import {
   fetchGame,
   gameStreamUrl,
   type GameStatus,
+  type RatingChange,
   type SearchInfo,
   type StreamEvent,
   type UciLine,
@@ -44,6 +45,9 @@ export function useGame(id: string | undefined) {
   const [whiteVersion, setWhiteVersion] = useState<string | null>(null)
   const [blackVersion, setBlackVersion] = useState<string | null>(null)
   const [tc, setTc] = useState<string | null>(null)
+  // Fetch-only too: a game is rated after its end event.
+  const [whiteRating, setWhiteRating] = useState<RatingChange | null>(null)
+  const [blackRating, setBlackRating] = useState<RatingChange | null>(null)
   const [runnerId, setRunnerId] = useState<string | null>(null)
   const [bookPlies, setBookPlies] = useState(0)
   const [moves, setMoves] = useState<string[]>([])
@@ -68,6 +72,8 @@ export function useGame(id: string | undefined) {
         setWhiteVersion(g.white_version)
         setBlackVersion(g.black_version)
         setTc(g.tc ?? null)
+        setWhiteRating(g.white_rating ?? null)
+        setBlackRating(g.black_rating ?? null)
         setRunnerId(g.runner_id ?? null)
         setBookPlies(g.book_plies ?? 0)
         setMoves(g.moves)
@@ -157,6 +163,8 @@ export function useGame(id: string | undefined) {
     blackName,
     whiteVersion,
     blackVersion,
+    whiteRating,
+    blackRating,
     tc,
     runnerId,
     bookPlies,

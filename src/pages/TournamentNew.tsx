@@ -13,7 +13,12 @@ import {
 } from '../api'
 import { Hint, PrimaryButton, Section } from '../components'
 import { useEngineVersions } from '../useEngineVersions'
-import { DEFAULT_TC, TC_PRESETS, estimateTournamentSeconds } from '../tc'
+import {
+  DEFAULT_TC,
+  TC_PRESETS,
+  estimateTournamentSeconds,
+  ratingCategory,
+} from '../tc'
 import { formatDuration } from '../format'
 
 // Mirrors MAX_GAMES_PER_TOURNAMENT in backend/app/tournaments.py.
@@ -142,6 +147,7 @@ export default function TournamentNew() {
   const [gamesPerPairing, setGamesPerPairing] = useState(2)
   const [runnerSel, setRunnerSel] = useState('')
   const [tcSel, setTcSel] = useState(DEFAULT_TC)
+  const [rated, setRated] = useState(true)
   // '' until the catalog loads, then the first book.
   const [bookSel, setBookSel] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -219,6 +225,7 @@ export default function TournamentNew() {
         games_per_pairing: gamesPerPairing,
         runner_id: runnerId,
         tc: tcSel,
+        rated,
         book,
       })
       await queryClient.invalidateQueries({ queryKey: ['tournaments'] })
@@ -316,6 +323,21 @@ export default function TournamentNew() {
               ))}
             </select>
           </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <span className="text-neutral-400 w-24 shrink-0">rated</span>
+            <input
+              type="checkbox"
+              className="accent-neutral-300"
+              checked={rated}
+              onChange={(e) => setRated(e.target.checked)}
+            />
+            <span className="text-neutral-500 text-xs">
+              {rated
+                ? `finished games count toward ${ratingCategory(tcSel)} ratings`
+                : 'no game changes any rating'}
+            </span>
+          </label>
 
           <div className="flex items-center gap-2">
             <span className="text-neutral-400 w-24 shrink-0">openings</span>

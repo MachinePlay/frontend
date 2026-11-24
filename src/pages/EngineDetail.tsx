@@ -20,6 +20,7 @@ import {
   Hint,
   InlineEdit,
   LoadError,
+  RatingChips,
   Section,
   TagPills,
 } from '../components'
@@ -54,6 +55,11 @@ function VersionRow({
           <span>{version.version}</span>
         </InlineEdit>
       </span>
+      {Object.keys(version.ratings).length > 0 ? (
+        <RatingChips ratings={version.ratings} />
+      ) : (
+        <span className="text-xs text-neutral-600">unrated</span>
+      )}
       <span className="ml-auto text-xs text-neutral-500">
         {formatBytes(version.size_bytes)}
       </span>

@@ -1326,6 +1326,28 @@
         }
       }
     },
+    "/admin/ratings/rebuild": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Rebuild Ratings",
+        "description": "Forget every rating and replay all rated games in end order.",
+        "operationId": "rebuild_ratings",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RebuildRatingsOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/stream/game/{game_id}": {
       "get": {
         "tags": [
@@ -1698,6 +1720,17 @@
             "type": "integer",
             "title": "Version Count",
             "default": 0
+          },
+          "ratings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Rating"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/RatingCategory"
+            },
+            "type": "object",
+            "title": "Ratings",
+            "default": {}
           }
         },
         "type": "object",
@@ -1844,6 +1877,16 @@
             "type": "string",
             "title": "Image Digest"
           },
+          "ratings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Rating"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/RatingCategory"
+            },
+            "type": "object",
+            "title": "Ratings"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -1857,6 +1900,7 @@
           "size_bytes",
           "image_repository",
           "image_digest",
+          "ratings",
           "created_at"
         ],
         "title": "EngineVersionOut"
@@ -2135,6 +2179,31 @@
             ],
             "title": "Tournament Id"
           },
+          "rated": {
+            "type": "boolean",
+            "title": "Rated",
+            "default": false
+          },
+          "white_rating": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RatingChange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "black_rating": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RatingChange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "book": {
             "anyOf": [
               {
@@ -2412,6 +2481,31 @@
               }
             ],
             "title": "Tournament Id"
+          },
+          "rated": {
+            "type": "boolean",
+            "title": "Rated",
+            "default": false
+          },
+          "white_rating": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RatingChange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "black_rating": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RatingChange"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "book": {
             "anyOf": [
@@ -2714,6 +2808,75 @@
         ],
         "title": "PendingSignupOut",
         "description": "The in-progress GitHub signup waiting for the user to pick a handle."
+      },
+      "Rating": {
+        "properties": {
+          "mu": {
+            "type": "number",
+            "title": "Mu"
+          },
+          "phi": {
+            "type": "number",
+            "title": "Phi"
+          },
+          "sigma": {
+            "type": "number",
+            "title": "Sigma"
+          },
+          "games": {
+            "type": "integer",
+            "title": "Games"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mu",
+          "phi",
+          "sigma",
+          "games"
+        ],
+        "title": "Rating",
+        "description": "Glicko-2 on the display scale: `phi` is the rating deviation (RD)."
+      },
+      "RatingCategory": {
+        "type": "string",
+        "enum": [
+          "bullet",
+          "blitz",
+          "rapid"
+        ],
+        "title": "RatingCategory"
+      },
+      "RatingChange": {
+        "properties": {
+          "before": {
+            "type": "number",
+            "title": "Before"
+          },
+          "after": {
+            "type": "number",
+            "title": "After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "before",
+          "after"
+        ],
+        "title": "RatingChange"
+      },
+      "RebuildRatingsOut": {
+        "properties": {
+          "games": {
+            "type": "integer",
+            "title": "Games"
+          }
+        },
+        "type": "object",
+        "required": [
+          "games"
+        ],
+        "title": "RebuildRatingsOut"
       },
       "RegisterRequest": {
         "properties": {
@@ -3026,6 +3189,27 @@
           "score": {
             "type": "number",
             "title": "Score"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rating"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rating_delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating Delta"
           }
         },
         "type": "object",
@@ -3187,6 +3371,11 @@
           "format": {
             "$ref": "#/components/schemas/TournamentFormat"
           },
+          "rated": {
+            "type": "boolean",
+            "title": "Rated",
+            "default": true
+          },
           "entries": {
             "items": {
               "$ref": "#/components/schemas/TournamentEntry"
@@ -3257,6 +3446,13 @@
           },
           "status": {
             "$ref": "#/components/schemas/TournamentStatus"
+          },
+          "rated": {
+            "type": "boolean",
+            "title": "Rated"
+          },
+          "rating_category": {
+            "$ref": "#/components/schemas/RatingCategory"
           },
           "runner_id": {
             "type": "string",
@@ -3368,6 +3564,8 @@
           "name",
           "format",
           "status",
+          "rated",
+          "rating_category",
           "runner_id",
           "created_by",
           "tc",
@@ -3559,6 +3757,10 @@
           "status": {
             "$ref": "#/components/schemas/TournamentStatus"
           },
+          "rated": {
+            "type": "boolean",
+            "title": "Rated"
+          },
           "runner_id": {
             "type": "string",
             "format": "uuid",
@@ -3604,6 +3806,7 @@
           "name",
           "format",
           "status",
+          "rated",
           "runner_id",
           "created_by",
           "participant_count",
@@ -3918,6 +4121,10 @@
     {
       "name": "Opening books",
       "description": "The opening lines games are dealt to start from, so two deterministic engines don't replay one game all tournament."
+    },
+    {
+      "name": "Admin",
+      "description": "Maintenance endpoints for admins."
     },
     {
       "name": "Live streaming",

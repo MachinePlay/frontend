@@ -2,10 +2,17 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import type { Config } from '@lichess-org/chessground/config'
 import { Chessground } from '../Chessground'
-import { cancelGame, runnerUrl, type GameStatus, type SearchInfo } from '../api'
+import {
+  cancelGame,
+  runnerUrl,
+  type GameStatus,
+  type RatingChange,
+  type SearchInfo,
+} from '../api'
 import { useAuth } from '../auth-context'
 import { EvalBar } from '../EvalBar'
 import { evalsAt, formatEval, toWhite } from '../eval'
+import { RatingDelta } from '../components'
 import { formatClock } from '../format'
 import { GameDebug } from '../GameDebug'
 import { GameLines } from '../GameLines'
@@ -103,6 +110,7 @@ function PlayerBar({
   color,
   name,
   version,
+  rating,
   pieces,
   clock,
   since,
@@ -111,6 +119,7 @@ function PlayerBar({
   color: 'white' | 'black'
   name: string | null
   version: string | null
+  rating: RatingChange | null
   pieces: CapturedPiece[]
   clock: number | null
   since: number
@@ -124,6 +133,12 @@ function PlayerBar({
       <span className="text-neutral-100 font-medium">{name ?? '—'}</span>
       {version && (
         <span className="text-neutral-500 text-xs font-mono">{version}</span>
+      )}
+      {rating && (
+        <span className="text-xs text-neutral-400 tabular-nums">
+          {Math.round(rating.after)}{' '}
+          <RatingDelta delta={rating.after - rating.before} />
+        </span>
       )}
       <CapturedPieces pieces={pieces} />
       {clock !== null && (
@@ -376,6 +391,8 @@ export default function GamePage() {
     blackName,
     whiteVersion,
     blackVersion,
+    whiteRating,
+    blackRating,
     tc,
     runnerId,
     bookPlies,
@@ -514,6 +531,7 @@ export default function GamePage() {
     color: 'white',
     name: whiteName,
     version: whiteVersion,
+    rating: whiteRating,
     pieces: byWhite,
     clock: clocks?.white ?? null,
     since: clocks?.updatedAt ?? 0,
@@ -523,6 +541,7 @@ export default function GamePage() {
     color: 'black',
     name: blackName,
     version: blackVersion,
+    rating: blackRating,
     pieces: byBlack,
     clock: clocks?.black ?? null,
     since: clocks?.updatedAt ?? 0,

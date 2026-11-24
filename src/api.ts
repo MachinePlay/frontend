@@ -291,6 +291,9 @@ export type TournamentProgress = TournamentProgressType
 export type Standing = StandingRow
 
 export type {
+  Rating,
+  RatingCategory,
+  RatingChange,
   EngineUpdateRequest,
   SearchInfo,
   UciLine,
