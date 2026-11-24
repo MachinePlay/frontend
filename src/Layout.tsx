@@ -117,7 +117,7 @@ export default function Layout() {
   return (
     <div className="flex min-h-dvh flex-col bg-bg text-fg">
       <header className="border-b border-line">
-        <div className="mx-auto flex h-14 max-w-[1160px] items-center gap-4 px-4 text-sm sm:gap-7 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-[1160px] items-center gap-3 px-4 text-sm sm:gap-7 sm:px-6">
           <Link
             to="/"
             className="flex shrink-0 items-center gap-2.5 text-md font-semibold"
@@ -125,15 +125,16 @@ export default function Layout() {
             <img src="/favicon.svg" alt="" className="h-[22px] w-[22px]" />
             <span className="hidden md:inline">MachinePlay</span>
           </Link>
-          <nav className="-my-2 flex min-w-0 gap-4 overflow-x-auto py-2 text-muted sm:gap-5 [scrollbar-width:none]">
+          <nav className="-my-2 flex min-w-0 gap-3.5 overflow-x-auto py-2 text-muted sm:gap-5 [scrollbar-width:none]">
             {NAV.map(({ to, label }) => (
               <NavLink
                 key={to}
                 to={to}
+                // The logo links home on phones, where Watch doesn't fit.
                 className={({ isActive }) =>
                   `shrink-0 transition-colors hover:text-fg ${
                     (to === '/' ? watching : isActive) ? 'text-fg' : ''
-                  }`
+                  } ${to === '/' ? 'max-sm:hidden' : ''}`
                 }
               >
                 {label}

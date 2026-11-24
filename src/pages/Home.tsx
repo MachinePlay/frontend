@@ -174,6 +174,9 @@ export default function Home() {
 
   const allLive = (games ?? []).filter((g) => g.status === 'playing')
   const live = showAllLive ? allLive : allLive.slice(0, LIVE_PREVIEW)
+  const lastFinished = (games ?? [])
+    .filter((g) => g.status === 'ended')
+    .slice(0, LIVE_PREVIEW)
   const recent = (games ?? [])
     .filter((g) => g.status === 'ended' || g.status === 'aborted')
     .slice(0, 5)
@@ -212,10 +215,15 @@ export default function Home() {
         </div>
         {games === undefined ? (
           <Hint>Loading…</Hint>
-        ) : live.length === 0 ? (
-          <Hint>No games are being played right now.</Hint>
-        ) : (
+        ) : live.length > 0 ? (
           <LiveGameGrid games={live} />
+        ) : lastFinished.length > 0 ? (
+          <>
+            <Hint>Nothing is playing right now. How the last games ended:</Hint>
+            <LiveGameGrid games={lastFinished} />
+          </>
+        ) : (
+          <Hint>No games are being played right now.</Hint>
         )}
       </section>
 

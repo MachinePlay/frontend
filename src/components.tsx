@@ -4,7 +4,7 @@ import type { Config } from '@lichess-org/chessground/config'
 import { Chessground } from './Chessground'
 import { gameUrl, type Game, type TournamentStatus } from './api'
 import { barFill } from './eval'
-import { formatClock } from './format'
+import { capitalize, formatClock } from './format'
 import { finishedMeta, moveNumber, resultText } from './games'
 import { formatTc } from './tc'
 import { Hint, LiveDot } from './ui'
@@ -120,8 +120,10 @@ function CardPlayer({
   )
 }
 
-/** A live game's board preview, on the home and tournament pages. */
+/** A game's board preview, on the home and tournament pages. A finished one
+    sits dimmed in its final position, its result where the move count goes. */
 export function LiveGameCard({ game }: { game: Game }) {
+  const finished = game.status !== 'playing'
   // A fresh config would redraw the board on every render.
   const config = useMemo(
     (): Config => ({
@@ -134,11 +136,16 @@ export function LiveGameCard({ game }: { game: Game }) {
   )
   const whiteToMove = game.fen.split(' ')[1] !== 'b'
   return (
-    <Link to={gameUrl(game.id)} className="group flex min-w-0 flex-col gap-2">
+    <Link
+      to={gameUrl(game.id)}
+      className={`group flex min-w-0 flex-col gap-2 ${
+        finished ? 'opacity-55 transition-opacity hover:opacity-100' : ''
+      }`}
+    >
       <CardPlayer
         name={game.black_name}
         clock={game.black_clock}
-        toMove={!whiteToMove}
+        toMove={!finished && !whiteToMove}
       />
       <div className="flex gap-1.5">
         <MiniEvalBar game={game} />
@@ -149,11 +156,19 @@ export function LiveGameCard({ game }: { game: Game }) {
       <CardPlayer
         name={game.white_name}
         clock={game.white_clock}
-        toMove={whiteToMove}
+        toMove={!finished && whiteToMove}
       />
       <span className="truncate text-xs text-faint">
-        {game.tournament_name ?? 'Casual'} · move {moveNumber(game.moves.length)}
-        {game.tc && (
+        {game.tournament_name ?? 'Casual'} ·{' '}
+        {finished ? (
+          <>
+            <span className="num font-medium text-fg">{resultText(game)}</span>
+            {game.reason && ` · ${capitalize(game.reason)}`}
+          </>
+        ) : (
+          `move ${moveNumber(game.moves.length)}`
+        )}
+        {!finished && game.tc && (
           <>
             {' · '}
             <span className="num">{formatTc(game.tc)}</span>
