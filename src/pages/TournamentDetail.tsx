@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelTournament,
+  fetchRunner,
   fetchTournament,
   fetchTournamentGames,
   isDeletedLogin,
@@ -21,43 +17,39 @@ import {
   type TournamentDetail as TournamentDetailData,
   type TournamentProgress,
 } from '../api'
-import {
-  GameList,
-  Hint,
-  LiveGameGrid,
-  LoadError,
-  RatingDelta,
-  Section,
-  TournamentStatusPill,
-} from '../components'
+import { GameList, LiveGameGrid, TournamentStatusPill } from '../components'
 import { useAuth } from '../auth-context'
 import { applyLiveEvent } from '../live'
+import { formatDuration, formatLabel, formatRating, relativeTime } from '../format'
+import { link, row, tableHead } from '../styles'
+import { formatTc } from '../tc'
 import {
-  formatDuration,
-  formatLabel,
-  formatRating,
-  relativeTime,
-} from '../format'
+  ConfirmButton,
+  Hint,
+  Loading,
+  LoadError,
+  Page,
+  RatingDelta,
+  SectionHeader,
+  Segmented,
+} from '../ui'
 import NotFound from './NotFound'
 
 const GAMES_PAGE = 50
 
-const FILTERS: { label: string; status?: GameStatus }[] = [
-  { label: 'all' },
-  { label: 'finished', status: 'ended' },
-  { label: 'pending', status: 'pending' },
-  { label: 'aborted', status: 'aborted' },
-]
+const FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'ended', label: 'Finished' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'aborted', label: 'Aborted' },
+] as const
 
-function Creator({ login }: { login: string }) {
-  if (isDeletedLogin(login)) {
-    return <span className="text-neutral-500">{login}</span>
-  }
+type Filter = (typeof FILTERS)[number]['value']
+
+function Person({ login }: { login: string }) {
+  if (isDeletedLogin(login)) return <span>{login}</span>
   return (
-    <Link
-      to={profileUrl(login)}
-      className="text-neutral-300 hover:text-neutral-100 transition-colors"
-    >
+    <Link to={profileUrl(login)} className="text-fg transition-colors hover:text-muted">
       {login}
     </Link>
   )
@@ -72,82 +64,66 @@ function StandingsTable({
   headVersionId: string | null
   rated: boolean
 }) {
-  if (standings.length === 0) return <Hint>no results yet</Hint>
+  if (standings.length === 0) return <Hint>No results yet</Hint>
+  const grid = rated
+    ? 'grid grid-cols-[20px_minmax(0,1fr)_28px_28px_28px_28px_44px] gap-2 sm:grid-cols-[28px_minmax(0,1fr)_36px_36px_36px_36px_52px_64px_44px] sm:gap-3'
+    : 'grid grid-cols-[20px_minmax(0,1fr)_28px_28px_28px_28px_44px] gap-2 sm:grid-cols-[28px_minmax(0,1fr)_36px_36px_36px_36px_52px] sm:gap-3'
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="text-left text-neutral-500 text-xs uppercase tracking-wide">
-            <th className="py-1 pr-2 font-normal w-8">#</th>
-            <th className="py-1 pr-2 font-normal">engine</th>
-            <th className="py-1 px-2 font-normal text-right">P</th>
-            <th className="py-1 px-2 font-normal text-right">W</th>
-            <th className="py-1 px-2 font-normal text-right">D</th>
-            <th className="py-1 px-2 font-normal text-right">L</th>
-            <th className="py-1 pl-2 font-normal text-right">score</th>
-            {rated && (
-              <>
-                <th className="py-1 pl-4 font-normal text-right">rating</th>
-                <th className="py-1 pl-2 font-normal text-right">±</th>
-              </>
+    <div className="flex flex-col">
+      <div className={`${grid} ${tableHead}`}>
+        <span>#</span>
+        <span>Engine</span>
+        <span className="text-right">P</span>
+        <span className="text-right">W</span>
+        <span className="text-right">D</span>
+        <span className="text-right">L</span>
+        <span className="text-right">Score</span>
+        {rated && (
+          <>
+            <span className="hidden text-right sm:block">Rating</span>
+            <span className="hidden text-right sm:block">±</span>
+          </>
+        )}
+      </div>
+      {standings.map((s, i) => (
+        <div
+          key={s.version_id}
+          className={`${grid} ${row} items-center py-2.5 text-sm tabular-nums`}
+        >
+          <span className="text-faint">{i + 1}</span>
+          <span className="min-w-0 truncate">
+            {s.engine_name}{' '}
+            <span className="num text-xs text-faint">{s.version}</span>
+            {headVersionId === s.version_id && (
+              <span className="ml-2 text-xs text-muted">head</span>
             )}
-          </tr>
-        </thead>
-        <tbody>
-          {standings.map((row, i) => (
-            <tr
-              key={row.version_id}
-              className="border-t border-neutral-800/70 text-neutral-200"
-            >
-              <td className="py-1.5 pr-2 text-neutral-500 tabular-nums">
-                {i + 1}
-              </td>
-              <td className="py-1.5 pr-2">
-                {row.engine_name}
-                <span className="ml-1.5 text-xs text-neutral-500">
-                  {row.version}
-                </span>
-                {headVersionId === row.version_id && (
-                  <span className="ml-2 text-xs text-green-400">head</span>
-                )}
-              </td>
-              <td className="py-1.5 px-2 text-right tabular-nums text-neutral-400">
-                {row.played}
-              </td>
-              <td className="py-1.5 px-2 text-right tabular-nums">{row.wins}</td>
-              <td className="py-1.5 px-2 text-right tabular-nums">{row.draws}</td>
-              <td className="py-1.5 px-2 text-right tabular-nums">
-                {row.losses}
-              </td>
-              <td className="py-1.5 pl-2 text-right tabular-nums font-medium">
-                {row.score}
-              </td>
-              {rated && (
-                <>
-                  <td
-                    className="py-1.5 pl-4 text-right tabular-nums text-neutral-300"
-                    title={
-                      row.rating
-                        ? `rating deviation ${Math.round(row.rating.phi)}`
-                        : undefined
-                    }
-                  >
-                    {row.rating ? formatRating(row.rating) : '—'}
-                  </td>
-                  <td className="py-1.5 pl-2 text-right">
-                    <RatingDelta delta={row.rating_delta ?? 0} />
-                  </td>
-                </>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </span>
+          <span className="text-right text-muted">{s.played}</span>
+          <span className="text-right">{s.wins}</span>
+          <span className="text-right">{s.draws}</span>
+          <span className="text-right">{s.losses}</span>
+          <span className="text-right font-semibold">{s.score}</span>
+          {rated && (
+            <>
+              <span
+                className="num hidden text-right text-muted sm:block"
+                title={s.rating ? `Rating deviation ${Math.round(s.rating.phi)}` : undefined}
+              >
+                {s.rating ? formatRating(s.rating) : '—'}
+              </span>
+              <RatingDelta
+                delta={s.rating_delta ?? 0}
+                className="hidden text-right text-meta sm:block"
+              />
+            </>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
 
-/** Progress and ETA. Aborted games count as done but are tinted apart. */
+/** Segments for played, aborted and playing games, then a legend. */
 function ProgressBar({
   progress,
   etaSeconds,
@@ -155,28 +131,23 @@ function ProgressBar({
   progress: TournamentProgress
   etaSeconds: number | null | undefined
 }) {
-  const { total, ended, aborted, playing } = progress
+  const { total, ended, aborted, playing, pending } = progress
   if (total === 0) return null
   const pct = (n: number) => `${(100 * n) / total}%`
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
-        <div className="bg-neutral-400" style={{ width: pct(ended) }} />
-        <div className="bg-amber-700/70" style={{ width: pct(aborted) }} />
-        <div className="bg-green-600 animate-pulse" style={{ width: pct(playing) }} />
+    <div className="flex flex-col gap-2">
+      <div className="flex h-1.5 overflow-hidden rounded-full bg-track">
+        <span className="bg-muted" style={{ width: pct(ended) }} />
+        <span className="bg-loss/70" style={{ width: pct(aborted) }} />
+        <span className="bg-accent" style={{ width: pct(playing) }} />
       </div>
-      <div className="flex flex-wrap items-center gap-x-3 text-xs text-neutral-500">
-        <span className="tabular-nums text-neutral-400">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-meta tabular-nums text-faint">
+        <span className="text-muted">
           {ended} / {total} played
         </span>
-        {aborted > 0 && (
-          <span className="text-amber-500/80 tabular-nums">
-            {aborted} aborted
-          </span>
-        )}
-        {progress.pending > 0 && (
-          <span className="tabular-nums">{progress.pending} queued</span>
-        )}
+        {aborted > 0 && <span className="text-loss">{aborted} aborted</span>}
+        {playing > 0 && <span className="text-accent">{playing} playing</span>}
+        {pending > 0 && <span>{pending} queued</span>}
         {etaSeconds != null && (
           <span className="ml-auto">~{formatDuration(etaSeconds)} left</span>
         )}
@@ -185,25 +156,14 @@ function ProgressBar({
   )
 }
 
-function Pairings({
-  id,
-  total,
-  running,
-}: {
-  id: string
-  total: number
-  running: boolean
-}) {
-  const [status, setStatus] = useState<GameStatus | undefined>(undefined)
+function Pairings({ id, running }: { id: string; running: boolean }) {
+  const [filter, setFilter] = useState<Filter>('all')
+  const status: GameStatus | undefined = filter === 'all' ? undefined : filter
   const { data, error, isFetching, fetchNextPage, hasNextPage } =
     useInfiniteQuery({
-      queryKey: ['tournament-games', id, status ?? 'all'],
+      queryKey: ['tournament-games', id, filter],
       queryFn: ({ pageParam }) =>
-        fetchTournamentGames(id, {
-          status,
-          limit: GAMES_PAGE,
-          offset: pageParam,
-        }),
+        fetchTournamentGames(id, { status, limit: GAMES_PAGE, offset: pageParam }),
       initialPageParam: 0,
       getNextPageParam: (last, pages) => {
         const loaded = pages.reduce((n, p) => n + p.games.length, 0)
@@ -214,99 +174,36 @@ function Pairings({
     })
 
   const games = data?.pages.flatMap((p) => p.games) ?? []
-  const matching = data?.pages[0]?.total ?? total
+  const matching = data?.pages[0]?.total
 
   return (
-    <Section
-      title={
+    <section className="flex flex-col gap-3">
+      <SectionHeader title="Pairings" count={matching}>
+        <Segmented
+          label="Pairings filter"
+          value={filter}
+          onChange={setFilter}
+          options={FILTERS}
+        />
+      </SectionHeader>
+      {error ? (
+        <Hint>Couldn't load the pairings</Hint>
+      ) : (
         <>
-          pairings
-          <span className="ml-2 text-neutral-400 normal-case">({matching})</span>
-        </>
-      }
-    >
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap gap-1.5">
-          {FILTERS.map((f) => (
+          <GameList games={games} empty={data ? 'No games match' : 'Loading…'} />
+          {hasNextPage && (
             <button
-              key={f.label}
               type="button"
-              onClick={() => setStatus(f.status)}
-              className={`rounded border px-2 py-0.5 text-xs transition-colors ${
-                status === f.status
-                  ? 'border-neutral-500 bg-neutral-800 text-neutral-100'
-                  : 'border-neutral-800 text-neutral-400 hover:border-neutral-600'
-              }`}
+              disabled={isFetching}
+              onClick={() => void fetchNextPage()}
+              className={`${link} self-start text-sm disabled:opacity-40`}
             >
-              {f.label}
+              {isFetching ? 'Loading…' : `Load more (${games.length}/${matching})`}
             </button>
-          ))}
-        </div>
-        {error ? (
-          <Hint>could not load the pairings</Hint>
-        ) : (
-          <>
-            <GameList games={games} />
-            {hasNextPage && (
-              <button
-                type="button"
-                disabled={isFetching}
-                onClick={() => void fetchNextPage()}
-                className="self-start text-sm text-neutral-400 hover:text-neutral-100 transition-colors disabled:opacity-40"
-              >
-                {isFetching ? 'loading…' : `load more (${games.length}/${matching})`}
-              </button>
-            )}
-          </>
-        )}
-      </div>
-    </Section>
-  )
-}
-
-function CancelControl({ id }: { id: string }) {
-  const queryClient = useQueryClient()
-  const [armed, setArmed] = useState(false)
-
-  useEffect(() => {
-    if (!armed) return
-    const t = setTimeout(() => setArmed(false), 4000)
-    return () => clearTimeout(t)
-  }, [armed])
-
-  const cancel = useMutation({
-    mutationFn: () => cancelTournament(id),
-    onSuccess: async () => {
-      setArmed(false)
-      await queryClient.invalidateQueries({ queryKey: ['tournament', id] })
-      await queryClient.invalidateQueries({ queryKey: ['tournaments'] })
-    },
-  })
-
-  return (
-    <div className="flex flex-col items-end gap-1">
-      <button
-        type="button"
-        disabled={cancel.isPending}
-        onClick={() => (armed ? cancel.mutate() : setArmed(true))}
-        className={`text-xs px-2 py-0.5 rounded border transition-colors disabled:opacity-40 ${
-          armed
-            ? 'border-red-700 text-red-400 hover:bg-red-950'
-            : 'border-neutral-700 text-neutral-400 hover:bg-neutral-800'
-        }`}
-      >
-        {cancel.isPending
-          ? 'cancelling…'
-          : armed
-            ? 'really cancel?'
-            : 'cancel tournament'}
-      </button>
-      {cancel.isError && (
-        <span className="text-red-400 text-xs">
-          {cancel.error instanceof Error ? cancel.error.message : 'failed'}
-        </span>
+          )}
+        </>
       )}
-    </div>
+    </section>
   )
 }
 
@@ -324,6 +221,12 @@ export default function TournamentDetail() {
     refetchInterval: (query) =>
       query.state.data?.status === 'running' ? 3_000 : false,
   })
+  const { data: runner } = useQuery({
+    queryKey: ['runner', t?.runner_id],
+    queryFn: () => fetchRunner(t!.runner_id),
+    enabled: t !== undefined,
+    staleTime: 60_000,
+  })
 
   // Animate the boards already on screen; the poll adds new ones. No refetch
   // on game_end: at short time controls that fires several times a second.
@@ -331,18 +234,12 @@ export default function TournamentDetail() {
     const es = new EventSource(liveStreamUrl())
     es.onmessage = (e) => {
       const event: LiveStreamEvent = JSON.parse(e.data)
-      queryClient.setQueryData<TournamentDetailData>(
-        ['tournament', id],
-        (prev) => {
-          if (!prev || !prev.live_games.some((g) => g.id === event.game_id)) {
-            return prev
-          }
-          return {
-            ...prev,
-            live_games: applyLiveEvent(prev.live_games, event),
-          }
-        },
-      )
+      queryClient.setQueryData<TournamentDetailData>(['tournament', id], (prev) => {
+        if (!prev || !prev.live_games.some((g) => g.id === event.game_id)) {
+          return prev
+        }
+        return { ...prev, live_games: applyLiveEvent(prev.live_games, event) }
+      })
     }
     return () => es.close()
   }, [queryClient, id])
@@ -351,91 +248,81 @@ export default function TournamentDetail() {
     return isNotFound(error) ? (
       <NotFound />
     ) : (
-      <LoadError
-        what="this tournament"
-        error={error}
-        onRetry={() => void refetch()}
-      />
+      <LoadError what="this tournament" error={error} onRetry={() => void refetch()} />
     )
   }
-  if (!t) {
-    return (
-      <div className="max-w-5xl mx-auto px-4 py-10">
-        <Hint>loading…</Hint>
-      </div>
-    )
-  }
+  if (!t) return <Loading />
 
   const canCancel =
-    t.status === 'running' &&
-    (user?.login === t.created_by || user?.is_admin === true)
+    t.status === 'running' && (user?.login === t.created_by || user?.is_admin === true)
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-5">
-      <div className="flex items-start gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="flex items-center gap-2 text-xl font-semibold text-neutral-100">
-            {t.name}
+    <Page>
+      <div className="flex flex-wrap items-start gap-4">
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-title font-semibold">{t.name}</h1>
             <TournamentStatusPill status={t.status} />
-          </h1>
-          <p className="text-sm text-neutral-400">
-            {formatLabel(t.format)} · {t.progress.total} game
-            {t.progress.total === 1 ? '' : 's'}
-            {t.participants.length > 2 && <> ({t.games_per_pairing}/pairing)</>}{' '}
-            · {t.tc} ·{' '}
+          </div>
+          <p className="text-sm text-muted">
+            {formatLabel(t.format)} · {t.progress.total}{' '}
+            {t.progress.total === 1 ? 'game' : 'games'}
+            {t.participants.length > 2 && <> ({t.games_per_pairing}/pairing)</>} ·{' '}
+            <span className="num">{formatTc(t.tc)}</span> ·{' '}
             {t.rated ? `rated ${t.rating_category}` : 'unrated'} · on{' '}
             <Link
               to={runnerUrl(t.runner_id)}
-              className="text-neutral-300 hover:text-neutral-100 transition-colors"
+              className="text-fg transition-colors hover:text-muted"
             >
-              runner
+              {runner?.name ?? 'runner'}
             </Link>{' '}
-            · {t.book ? (t.book_name ?? t.book) : 'no book'} · by{' '}
-            <Creator login={t.created_by} />
+            · {t.book ? `${t.book_name ?? t.book} book` : 'no book'} · by{' '}
+            <Person login={t.created_by} />
           </p>
         </div>
         {canCancel && (
-          <div className="ml-auto">
-            <CancelControl id={t.id} />
-          </div>
+          <span className="ml-auto">
+            <ConfirmButton
+              label="Cancel tournament"
+              confirmLabel="Really cancel?"
+              busyLabel="Cancelling…"
+              onConfirm={async () => {
+                await cancelTournament(t.id)
+                await queryClient.invalidateQueries({ queryKey: ['tournament', id] })
+                await queryClient.invalidateQueries({ queryKey: ['tournaments'] })
+              }}
+            />
+          </span>
         )}
       </div>
 
       <ProgressBar progress={t.progress} etaSeconds={t.eta_seconds} />
 
-      <Section title="standings">
-        <StandingsTable
-          standings={t.standings}
-          headVersionId={t.gauntlet_head_version_id}
-          rated={t.rated}
-        />
-      </Section>
+      <div
+        className={`grid grid-cols-1 gap-12 ${t.live_games.length > 0 ? 'lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]' : ''}`}
+      >
+        <section className="flex min-w-0 flex-col gap-3">
+          <SectionHeader title="Standings" />
+          <StandingsTable
+            standings={t.standings}
+            headVersionId={t.gauntlet_head_version_id}
+            rated={t.rated}
+          />
+        </section>
+        {t.live_games.length > 0 && (
+          <section className="flex min-w-0 flex-col gap-3">
+            <SectionHeader title="Live now" count={t.live_games.length} />
+            <LiveGameGrid games={t.live_games} columns={2} />
+          </section>
+        )}
+      </div>
 
-      {t.live_games.length > 0 && (
-        <Section
-          title={
-            <>
-              live now
-              <span className="ml-2 text-neutral-400 normal-case">
-                ({t.live_games.length})
-              </span>
-            </>
-          }
-        >
-          <LiveGameGrid games={t.live_games} />
-        </Section>
-      )}
+      <Pairings id={t.id} running={t.status === 'running'} />
 
-      <Pairings
-        id={t.id}
-        total={t.progress.total}
-        running={t.status === 'running'}
-      />
-
-      <p className="text-xs text-neutral-600">
-        created {relativeTime(t.created_at)}
+      <p className="text-xs text-faint">
+        Created {relativeTime(t.created_at)}
         {t.ended_at && <> · ended {relativeTime(t.ended_at)}</>}
       </p>
-    </div>
+    </Page>
   )
 }

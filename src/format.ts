@@ -1,7 +1,34 @@
-import type { Rating, TournamentFormat } from './api'
+import type { Rating, RatingCategory, TournamentFormat } from './api'
+
+export const RATING_CATEGORIES: RatingCategory[] = ['bullet', 'blitz', 'rapid']
 
 export const formatLabel = (f: TournamentFormat): string =>
-  f === 'round_robin' ? 'round robin' : 'gauntlet'
+  f === 'round_robin' ? 'Round robin' : 'Gauntlet'
+
+export const capitalize = (s: string): string =>
+  s ? s[0].toUpperCase() + s.slice(1) : s
+
+/** "1-0" → "1–0", "1/2-1/2" → "½–½". */
+export function formatResult(result: string | null | undefined): string {
+  if (!result || result === '*') return ''
+  return result.replace('1/2', '½').replace('1/2', '½').replace('-', '–')
+}
+
+export const formatCount = (n: number): string => n.toLocaleString('en-US')
+
+/** "Nov 21", with the year only when it isn't this one. */
+export function formatDate(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(d.getFullYear() !== new Date().getFullYear() && { year: 'numeric' }),
+  })
+}
+
+export function formatPercent(part: number, whole: number): string {
+  return whole > 0 ? `${Math.round((100 * part) / whole)}%` : '—'
+}
 
 // Lichess's cut-off for a rating it marks provisional.
 const PROVISIONAL_RD = 110

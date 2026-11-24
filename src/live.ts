@@ -1,4 +1,17 @@
-import { START_FEN, type Game, type LiveStreamEvent } from './api'
+import { START_FEN, type Game, type LiveStreamEvent, type SearchInfo } from './api'
+import { toWhite } from './eval'
+
+const scoreAt = (info: SearchInfo | null | undefined, ply: number) =>
+  toWhite(info, ply % 2 === 0 ? 'white' : 'black')
+
+/** The latest scored search in White's frame, as GameOut's `score` carries it. */
+export function latestScore(evals: (SearchInfo | null)[]): Game['score'] {
+  for (let ply = evals.length - 1; ply >= 0; ply--) {
+    const score = scoreAt(evals[ply], ply)
+    if (score) return score
+  }
+  return null
+}
 
 function freshGame(id: string, partial: Partial<Game>): Game {
   return {
@@ -63,6 +76,7 @@ export function applyLiveEvent(
       white_clock: event.white_clock,
       black_clock: event.black_clock,
     }
+    if (event.evals) update.score = latestScore(event.evals)
     if (idx < 0) return [freshGame(game_id, update), ...games]
     return replaceAt(games, idx, { ...games[idx], ...update })
   }
@@ -70,8 +84,10 @@ export function applyLiveEvent(
   if (idx < 0) return games
 
   if (event.type === 'move') {
+    const score = scoreAt(event.analysis, games[idx].moves.length)
     return replaceAt(games, idx, {
       ...games[idx],
+      ...(score && { score }),
       fen: event.fen,
       moves: [...games[idx].moves, event.san],
       white_clock: event.white_clock,

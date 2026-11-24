@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react'
 import type { SearchInfo } from './api'
 import { barFill, formatEval, pvSan, toWhite, type Side } from './eval'
+import { SideChip } from './ui'
 
 const compact = (n: number | null | undefined): string | null => {
   if (n == null) return null
@@ -21,22 +22,24 @@ function pvText(san: string[], startPly: number): string {
     .join(' ')
 }
 
-/** One engine's last search. `fen` is the position it searched. */
-const EngineSearch = memo(function EngineSearch({
+export type SearchView = {
+  name: string | null
+  info: SearchInfo | null
+  // The position it searched.
+  fen: string | null
+  startPly: number
+  thinking: boolean
+}
+
+/** One engine's latest search, always on screen beside the board. */
+export const EngineSearch = memo(function EngineSearch({
   side,
   name,
   info,
   fen,
   startPly,
   thinking,
-}: {
-  side: Side
-  name: string | null
-  info: SearchInfo | null
-  fen: string | null
-  startPly: number
-  thinking: boolean
-}) {
+}: SearchView & { side: Side }) {
   const value = toWhite(info, side)
   const line = useMemo(
     () => (info && fen ? pvSan(fen, info.pv ?? []) : []),
@@ -52,46 +55,32 @@ const EngineSearch = memo(function EngineSearch({
   ].filter(Boolean)
 
   return (
-    <div className="border-b border-neutral-800 px-2 py-1.5 flex flex-col gap-1">
-      <div className="flex items-center gap-1.5 text-xs">
+    <div className="flex flex-col gap-1.5 border-b border-line px-4 py-3.5">
+      <div className="flex items-center gap-2 text-sm">
+        <SideChip side={side} wide />
+        <span className="min-w-0 truncate">{name ?? '—'}</span>
         <span
-          className={`w-4 text-center text-[10px] leading-4 rounded-sm font-medium shrink-0 ${
-            side === 'white'
-              ? 'bg-neutral-200 text-neutral-900'
-              : 'bg-neutral-950 text-neutral-300 border border-neutral-700'
-          }`}
+          className={`shrink-0 text-xs text-accent transition-opacity ${thinking ? '' : 'opacity-0'}`}
         >
-          {side === 'white' ? 'W' : 'B'}
+          thinking
         </span>
-        <span className="text-neutral-300 truncate">{name ?? '—'}</span>
-        {thinking && (
-          <span className="text-[10px] text-green-500 animate-pulse shrink-0">
-            thinking
-          </span>
-        )}
-        <span
-          className={`ml-auto font-mono tabular-nums shrink-0 ${
-            barFill(value) >= 0.5 ? 'text-neutral-100' : 'text-neutral-400'
-          }`}
-        >
+        <span className="num ml-auto shrink-0 text-md font-medium">
           {formatEval(value)}
         </span>
       </div>
       {info ? (
         <>
-          <div className="text-[10px] text-neutral-500 font-mono">
-            {stats.join(' · ') || 'no search info'}
-          </div>
+          <span className="num text-xs text-faint">
+            {stats.join(' · ') || 'No search info'}
+          </span>
           {line.length > 0 && (
-            <div className="text-[11px] font-mono text-neutral-400 leading-snug">
+            <span className="num line-clamp-2 text-meta/5 text-muted">
               {pvText(line, startPly)}
-            </div>
+            </span>
           )}
         </>
       ) : (
-        <div className="text-[10px] text-neutral-600 italic">
-          nothing reported
-        </div>
+        <span className="text-xs text-faint">Nothing reported</span>
       )}
     </div>
   )
@@ -129,69 +118,55 @@ export const EvalGraph = memo(function EvalGraph({
 
   if (!paths.white && !paths.black) {
     return (
-      <div className="px-2 py-3 text-[10px] text-neutral-600 italic">
-        no evaluations yet — engines that report `score` in their UCI `info`
-        lines get graphed here
-      </div>
+      <p className="p-3 text-xs text-faint">
+        No evaluations yet. Engines that report a score in their UCI info lines
+        get graphed here.
+      </p>
     )
   }
 
   const markerX = plies > 0 ? (Math.min(activePly, plies) / plies) * W : 0
   return (
-    <div className="px-2 py-2 flex flex-col gap-1">
-      <div className="flex items-center gap-3 text-[10px] text-neutral-500">
-        <span className="flex items-center gap-1">
+    <div className="flex h-full flex-col gap-2 p-3">
+      <div className="flex items-center gap-4 text-xs text-faint">
+        <span className="flex items-center gap-1.5">
           <svg width="14" height="4">
-            <line
-              x1="0"
-              y1="2"
-              x2="14"
-              y2="2"
-              stroke="#e5e5e5"
-              strokeWidth="2"
-            />
+            <line x1="0" y1="2" x2="14" y2="2" stroke="#f0eee9" strokeWidth="2" />
           </svg>
-          white engine
+          White engine
         </span>
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1.5">
           <svg width="14" height="4">
             <line
               x1="0"
               y1="2"
               x2="14"
               y2="2"
-              stroke="#a3a3a3"
+              stroke="#a39f97"
               strokeWidth="2"
               strokeDasharray="3 2"
             />
           </svg>
-          black engine
+          Black engine
         </span>
       </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
-        className="w-full h-16 bg-neutral-950 rounded cursor-pointer"
+        className="min-h-0 w-full flex-1 cursor-pointer rounded bg-bg"
         onClick={(e) => {
           const box = e.currentTarget.getBoundingClientRect()
           const share = (e.clientX - box.left) / box.width
           onJump(Math.round(share * plies))
         }}
       >
-        <line
-          x1="0"
-          y1={H / 2}
-          x2={W}
-          y2={H / 2}
-          stroke="#404040"
-          strokeWidth="0.5"
-        />
+        <line x1="0" y1={H / 2} x2={W} y2={H / 2} stroke="#3a3733" strokeWidth="0.5" />
         {paths.white && (
           <path
             d={paths.white}
             fill="none"
-            stroke="#e5e5e5"
-            strokeWidth="1"
+            stroke="#f0eee9"
+            strokeWidth="1.5"
             vectorEffect="non-scaling-stroke"
           />
         )}
@@ -199,8 +174,8 @@ export const EvalGraph = memo(function EvalGraph({
           <path
             d={paths.black}
             fill="none"
-            stroke="#a3a3a3"
-            strokeWidth="1"
+            stroke="#a39f97"
+            strokeWidth="1.5"
             strokeDasharray="3 2"
             vectorEffect="non-scaling-stroke"
           />
@@ -210,7 +185,7 @@ export const EvalGraph = memo(function EvalGraph({
           y1="0"
           x2={markerX}
           y2={H}
-          stroke="#22c55e"
+          stroke="#857f77"
           strokeWidth="1"
           vectorEffect="non-scaling-stroke"
         />
@@ -218,38 +193,3 @@ export const EvalGraph = memo(function EvalGraph({
     </div>
   )
 })
-
-/** The "lines" tab: each engine's search at this ply, then the eval graph. */
-export function GameLines({
-  white,
-  black,
-  evals,
-  activePly,
-  onJump,
-}: {
-  white: {
-    name: string | null
-    info: SearchInfo | null
-    fen: string | null
-    startPly: number
-    thinking: boolean
-  }
-  black: {
-    name: string | null
-    info: SearchInfo | null
-    fen: string | null
-    startPly: number
-    thinking: boolean
-  }
-  evals: (SearchInfo | null)[]
-  activePly: number
-  onJump: (ply: number) => void
-}) {
-  return (
-    <div className="flex-1 min-h-0 overflow-y-auto">
-      <EngineSearch side="white" {...white} />
-      <EngineSearch side="black" {...black} />
-      <EvalGraph evals={evals} activePly={activePly} onJump={onJump} />
-    </div>
-  )
-}

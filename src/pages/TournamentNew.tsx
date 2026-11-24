@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth-context'
@@ -11,7 +11,6 @@ import {
   type Engine,
   type TournamentFormat,
 } from '../api'
-import { Hint, PrimaryButton, Section } from '../components'
 import { useEngineVersions } from '../useEngineVersions'
 import {
   DEFAULT_TC,
@@ -19,17 +18,24 @@ import {
   estimateTournamentSeconds,
   ratingCategory,
 } from '../tc'
-import { formatDuration } from '../format'
+import { formatCount, formatDuration } from '../format'
+import { button, field, link, panel } from '../styles'
+import {
+  ErrorText,
+  Hint,
+  Page,
+  PageHeader,
+  Segmented,
+  Select,
+  StatusDot,
+  Switch,
+} from '../ui'
 
 // Mirrors MAX_GAMES_PER_TOURNAMENT in backend/app/tournaments.py.
 const MAX_GAMES = 2000
 
 // Mirrors books.NO_BOOK in backend/app/books.py.
 const NO_BOOK = 'none'
-
-const selectClass = 'bg-neutral-900 border border-neutral-800 rounded px-2 py-1'
-const fieldClass =
-  'bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-sm'
 
 // `key` keeps a row's identity (and the gauntlet head) across removals;
 // `versionId` '' means latest.
@@ -45,6 +51,7 @@ function pairingCount(format: TournamentFormat, n: number): number {
   if (n < 2) return 0
   return format === 'gauntlet' ? n - 1 : (n * (n - 1)) / 2
 }
+
 
 function EntryRow({
   entry,
@@ -68,9 +75,10 @@ function EntryRow({
   const engine = engines.find((e) => e.id === entry.engineId)
   const versions = useEngineVersions(engine)
   return (
-    <div className="flex items-center gap-2 rounded border border-neutral-800 px-3 py-2">
-      <select
-        className={`${selectClass} text-sm flex-1 min-w-0`}
+    <div className="flex items-center gap-2">
+      <Select
+        aria-label="Engine"
+        className="flex-1"
         value={entry.engineId}
         onChange={(e) => onEngine(e.target.value)}
       >
@@ -79,12 +87,13 @@ function EntryRow({
             {e.owner_login}/{e.name}
           </option>
         ))}
-      </select>
-      <select
-        className={`${selectClass} text-xs w-24 shrink-0`}
+      </Select>
+      <Select
+        aria-label="Version"
+        title="Version to enter"
+        className="w-[120px] shrink-0"
         value={entry.versionId}
         onChange={(e) => onVersion(e.target.value)}
-        title="version to enter"
       >
         <option value="">latest</option>
         {versions.map((v) => (
@@ -92,29 +101,48 @@ function EntryRow({
             {v.version}
           </option>
         ))}
-      </select>
+      </Select>
       {gauntlet &&
         (isHead ? (
-          <span className="text-xs text-green-400 shrink-0 w-16 text-center">
-            head
-          </span>
+          <span className="w-20 shrink-0 text-center text-xs text-fg">Head</span>
         ) : (
           <button
             type="button"
             onClick={onMakeHead}
-            className="text-xs text-neutral-500 hover:text-neutral-200 shrink-0 w-16 text-center"
+            className={`${link} w-20 shrink-0 text-center text-xs`}
           >
-            make head
+            Make head
           </button>
         ))}
       <button
         type="button"
         onClick={onRemove}
-        className="text-neutral-600 hover:text-red-400 shrink-0"
-        title="remove"
+        aria-label="Remove participant"
+        title="Remove"
+        className="w-5 shrink-0 text-center text-faint transition-colors hover:text-loss"
       >
         ✕
       </button>
+    </div>
+  )
+}
+
+function SetupRow({
+  label,
+  hint,
+  children,
+}: {
+  label: string
+  hint?: string
+  children: ReactNode
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-4">
+      <span className="text-sm text-muted sm:pt-[7px]">{label}</span>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="flex min-h-[34px] items-center gap-2">{children}</div>
+        {hint && <span className="text-xs text-faint">{hint}</span>}
+      </div>
     </div>
   )
 }
@@ -124,7 +152,7 @@ export default function TournamentNew() {
   const queryClient = useQueryClient()
   const { user, login } = useAuth()
 
-  const { data: engines = [] } = useQuery({
+  const { data: allEngines = [] } = useQuery({
     queryKey: ['engines'],
     queryFn: fetchEngines,
   })
@@ -138,6 +166,7 @@ export default function TournamentNew() {
     queryFn: fetchBooks,
     staleTime: Infinity,
   })
+  const engines = allEngines.filter((e) => (e.version_count ?? 0) > 0)
 
   const [name, setName] = useState('')
   const [format, setFormat] = useState<TournamentFormat>('round_robin')
@@ -238,148 +267,131 @@ export default function TournamentNew() {
   }
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-6 flex flex-col gap-6">
-      <h1 className="text-xl font-semibold text-neutral-100">new tournament</h1>
+    <Page className="!max-w-[720px] !gap-6">
+      <PageHeader
+        title="New tournament"
+        subtitle="Pick engines, a time control and a runner. Games start right away."
+      />
 
-      <Section title="setup">
-        <div className="flex flex-col gap-3 text-sm">
-          <label className="flex items-center gap-2">
-            <span className="text-neutral-400 w-24 shrink-0">name</span>
-            <input
-              className={`${fieldClass} flex-1 min-w-0`}
-              value={name}
-              placeholder="my tournament"
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-
-          <div className="flex items-center gap-2">
-            <span className="text-neutral-400 w-24 shrink-0">format</span>
-            <div className="flex gap-2">
-              {(['round_robin', 'gauntlet'] as const).map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => setFormat(f)}
-                  className={`rounded border px-3 py-1 transition-colors ${
-                    format === f
-                      ? 'border-neutral-500 text-neutral-100 bg-neutral-800'
-                      : 'border-neutral-800 text-neutral-400 hover:border-neutral-600'
-                  }`}
-                >
-                  {f === 'round_robin' ? 'round robin' : 'gauntlet'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-neutral-400 w-24 shrink-0">games/pairing</span>
-            <input
-              type="number"
-              min={1}
-              max={maxPerPairing}
-              className={`${fieldClass} w-20`}
-              value={gamesPerPairing}
-              onChange={(e) =>
-                setGamesPerPairing(Math.max(1, Number(e.target.value) || 1))
-              }
-            />
-            <span className="text-neutral-600 text-xs">
-              colors alternate · up to {maxPerPairing} for {pairings} pairing
-              {pairings === 1 ? '' : 's'}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-neutral-400 w-24 shrink-0">runner</span>
-            <select
-              className={`${selectClass} flex-1 min-w-0`}
-              value={runnerId}
-              onChange={(e) => setRunnerSel(e.target.value)}
-              disabled={runners.length === 0}
-            >
-              {runners.length === 0 ? (
-                <option value="">no runners registered</option>
-              ) : (
-                runners.map((r) => (
-                  <option key={r.runner_id} value={r.runner_id} disabled={!r.online}>
-                    {r.name}
-                    {r.online ? '' : ' (offline)'}
-                  </option>
-                ))
-              )}
-            </select>
-            <select
-              className={`${selectClass} w-28`}
-              value={tcSel}
-              onChange={(e) => setTcSel(e.target.value)}
-              title="time control (base + increment)"
-            >
-              {TC_PRESETS.map((tc) => (
-                <option key={tc.value} value={tc.value}>
-                  {tc.label}
+      <div className={`${panel} flex flex-col gap-[18px] p-6`}>
+        <span className="text-meta text-faint">Setup</span>
+        <SetupRow label="Name">
+          <input
+            className={`${field} min-w-0 flex-1`}
+            value={name}
+            placeholder="My tournament"
+            onChange={(e) => setName(e.target.value)}
+          />
+        </SetupRow>
+        <SetupRow
+          label="Format"
+          hint={
+            format === 'gauntlet'
+              ? 'Gauntlet plays one head engine against the rest.'
+              : 'Everyone plays everyone.'
+          }
+        >
+          <Segmented
+            label="Format"
+            value={format}
+            onChange={setFormat}
+            options={[
+              { value: 'round_robin', label: 'Round robin' },
+              { value: 'gauntlet', label: 'Gauntlet' },
+            ]}
+          />
+        </SetupRow>
+        <SetupRow
+          label="Games per pairing"
+          hint={`Colours alternate · up to ${formatCount(maxPerPairing)} for ${pairings} ${pairings === 1 ? 'pairing' : 'pairings'}`}
+        >
+          <input
+            type="number"
+            min={1}
+            max={maxPerPairing}
+            className={`${field} w-20`}
+            value={gamesPerPairing}
+            onChange={(e) =>
+              setGamesPerPairing(Math.max(1, Number(e.target.value) || 1))
+            }
+          />
+        </SetupRow>
+        <SetupRow label="Runner">
+          <Select
+            aria-label="Runner"
+            className="flex-1"
+            value={runnerId}
+            onChange={(e) => setRunnerSel(e.target.value)}
+            disabled={runners.length === 0}
+            leading={selectedRunner && <StatusDot online={selectedRunner.online} size={7} />}
+          >
+            {runners.length === 0 ? (
+              <option value="">No runners registered</option>
+            ) : (
+              runners.map((r) => (
+                <option key={r.runner_id} value={r.runner_id} disabled={!r.online}>
+                  {r.name}
+                  {r.online ? ` · ${r.max_games} slots` : ' (offline)'}
                 </option>
-              ))}
-            </select>
-          </div>
-
-          <label className="flex items-center gap-2 cursor-pointer">
-            <span className="text-neutral-400 w-24 shrink-0">rated</span>
-            <input
-              type="checkbox"
-              className="accent-neutral-300"
-              checked={rated}
-              onChange={(e) => setRated(e.target.checked)}
-            />
-            <span className="text-neutral-500 text-xs">
-              {rated
-                ? `finished games count toward ${ratingCategory(tcSel)} ratings`
-                : 'no game changes any rating'}
-            </span>
-          </label>
-
-          <div className="flex items-center gap-2">
-            <span className="text-neutral-400 w-24 shrink-0">openings</span>
-            <select
-              className={`${selectClass} flex-1 min-w-0`}
-              value={book}
-              onChange={(e) => setBookSel(e.target.value)}
-              title="opening book each pairing is dealt from"
-            >
-              {books.map((b) => (
-                <option key={b.slug} value={b.slug}>
-                  {b.name}
-                </option>
-              ))}
-              <option value={NO_BOOK}>none — always from the start</option>
-            </select>
-          </div>
-          <Hint>
-            {selectedBook
-              ? `${selectedBook.lines} lines, ${selectedBook.plies} plies deep. ` +
+              ))
+            )}
+          </Select>
+          <Select
+            aria-label="Time control"
+            title="Time control (base + increment)"
+            className="w-[120px] shrink-0"
+            value={tcSel}
+            onChange={(e) => setTcSel(e.target.value)}
+          >
+            {TC_PRESETS.map((tc) => (
+              <option key={tc.value} value={tc.value}>
+                {tc.label}
+              </option>
+            ))}
+          </Select>
+        </SetupRow>
+        <SetupRow label="Rated">
+          <Switch checked={rated} onChange={setRated} label="Rated" />
+          <span className="text-meta text-muted">
+            {rated
+              ? `Finished games count toward ${ratingCategory(tcSel)} ratings`
+              : 'No game changes any rating'}
+          </span>
+        </SetupRow>
+        <SetupRow
+          label="Openings"
+          hint={
+            selectedBook
+              ? `${formatCount(selectedBook.lines)} lines, ${selectedBook.plies} plies deep. ` +
                 'Each is played twice, once from each side.'
               : 'Without a book, two engines that always pick the same move ' +
-                'replay one game per colour — the tournament tells you nothing.'}
-          </Hint>
-        </div>
-      </Section>
+                'replay one game per colour — the tournament tells you nothing.'
+          }
+        >
+          <Select
+            aria-label="Opening book"
+            title="Opening book each pairing is dealt from"
+            className="flex-1"
+            value={book}
+            onChange={(e) => setBookSel(e.target.value)}
+          >
+            {books.map((b) => (
+              <option key={b.slug} value={b.slug}>
+                {b.name}
+              </option>
+            ))}
+            <option value={NO_BOOK}>None — always from the start</option>
+          </Select>
+        </SetupRow>
+      </div>
 
-      <Section
-        title={
-          <>
-            participants
-            <span className="ml-2 text-neutral-400 normal-case">
-              ({entries.length})
-            </span>
-          </>
-        }
-      >
+      <div className={`${panel} flex flex-col gap-3 p-6`}>
+        <span className="text-meta text-faint">Participants · {entries.length}</span>
         {engines.length === 0 ? (
-          <Hint>no engines to enter — upload one first</Hint>
+          <Hint>No engines to enter — upload one first</Hint>
         ) : (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-1 max-h-80 overflow-y-auto pr-1">
+          <>
+            <div className="flex max-h-[26rem] flex-col gap-2 overflow-y-auto">
               {entries.map((entry) => (
                 <EntryRow
                   key={entry.key}
@@ -401,47 +413,51 @@ export default function TournamentNew() {
             <button
               type="button"
               onClick={() => setEntries((prev) => [...prev, mkEntry(engines[0].id)])}
-              className="self-start text-sm text-neutral-400 hover:text-neutral-100 transition-colors"
+              className={`${link} self-start text-sm`}
             >
-              + add participant
+              + Add participant
             </button>
             {dup && (
-              <span className="text-amber-500/80 text-xs">
-                the same engine + version is entered more than once
-              </span>
+              <ErrorText>The same engine and version is entered more than once</ErrorText>
             )}
-          </div>
+          </>
         )}
-      </Section>
+      </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-4">
         {user ? (
-          <PrimaryButton onClick={() => void submit()} disabled={!valid || submitting}>
-            {submitting ? 'starting…' : 'create & start'}
-          </PrimaryButton>
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={!valid || submitting}
+            className={button.primary}
+          >
+            {submitting ? 'Starting…' : 'Create & start'}
+          </button>
         ) : (
-          <PrimaryButton onClick={login}>sign in to create</PrimaryButton>
+          <button type="button" onClick={login} className={button.primary}>
+            Sign in to create
+          </button>
         )}
         {entries.length >= 2 && !dup && (
-          <span className="text-xs text-neutral-500">
-            {games} game{games === 1 ? '' : 's'} on {selectedRunner?.name ?? '—'}
+          <span className="text-meta text-muted">
+            {formatCount(games)} {games === 1 ? 'game' : 'games'} on{' '}
+            {selectedRunner?.name ?? '—'}
             {selectedRunner && (
-              <span className="text-neutral-600">
-                {' '}
-                ({selectedRunner.max_games} at a time)
-              </span>
+              <span className="text-faint"> ({selectedRunner.max_games} at a time)</span>
             )}
             {eta !== null && <> · ~{formatDuration(eta)}</>}
           </span>
         )}
       </div>
       {tooManyGames && (
-        <span className="text-amber-500/80 text-xs">
-          {games} games is over the {MAX_GAMES} limit — at most {maxPerPairing}{' '}
-          per pairing with {pairings} pairing{pairings === 1 ? '' : 's'}
-        </span>
+        <ErrorText>
+          {formatCount(games)} games is over the {formatCount(MAX_GAMES)} limit — at
+          most {maxPerPairing} per pairing with {pairings}{' '}
+          {pairings === 1 ? 'pairing' : 'pairings'}
+        </ErrorText>
       )}
-      {error && <span className="text-red-400 text-xs">{error}</span>}
-    </div>
+      {error && <ErrorText>{error}</ErrorText>}
+    </Page>
   )
 }

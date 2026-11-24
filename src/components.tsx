@@ -1,491 +1,16 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type ComponentProps,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-} from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import type { Config } from '@lichess-org/chessground/config'
 import { Chessground } from './Chessground'
-import {
-  ApiError,
-  engineUrl,
-  gameUrl,
-  isUnreachable,
-  runnerUrl,
-  tournamentUrl,
-  type Engine,
-  type Game,
-  type Rating,
-  type RatingCategory,
-  type Runner,
-  type RunnerLive,
-  type Tournament,
-  type TournamentStatus,
-} from './api'
-import { formatDelta, formatLabel, formatRating, relativeTime } from './format'
-
-export function Section({
-  title,
-  children,
-}: {
-  title: ReactNode
-  children: ReactNode
-}) {
-  return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-sm uppercase tracking-wide text-neutral-500">
-        {title}
-      </h2>
-      {children}
-    </section>
-  )
-}
-
-/** Muted one-liner for loading / empty states. */
-export function Hint({ children }: { children: ReactNode }) {
-  return <p className="text-neutral-500 text-sm italic">{children}</p>
-}
-
-/** "We couldn't load this": unlike NotFound, no trustworthy answer came back. */
-export function LoadError({
-  what,
-  error,
-  onRetry,
-}: {
-  what: string
-  error: unknown
-  onRetry?: () => void
-}) {
-  const status = error instanceof ApiError ? error.status : null
-  const detail = isUnreachable(error)
-    ? 'the API is unreachable — the backend is probably down.'
-    : status !== null
-      ? `the API answered ${status}.`
-      : 'something went wrong.'
-  return (
-    <div className="max-w-5xl mx-auto px-4 py-16 flex flex-col items-center gap-3 text-center">
-      <p className="text-xl font-semibold text-neutral-100">
-        couldn't load {what}
-      </p>
-      <p className="text-neutral-400 text-sm">{detail}</p>
-      {error instanceof Error && !isUnreachable(error) && (
-        <p className="text-neutral-600 text-xs font-mono">{error.message}</p>
-      )}
-      {onRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="text-xs px-2 py-0.5 rounded border border-neutral-700 text-neutral-400 hover:bg-neutral-800 transition-colors"
-        >
-          try again
-        </button>
-      )}
-    </div>
-  )
-}
-
-export function PrimaryButton({
-  className = '',
-  ...rest
-}: ComponentProps<'button'>) {
-  return (
-    <button
-      {...rest}
-      className={`bg-neutral-100 text-neutral-900 rounded px-3 py-1 text-sm disabled:opacity-40 ${className}`}
-    />
-  )
-}
-
-/** A destructive action in two clicks. Failures render beside the button, so
-    the user reads the backend's refusal. */
-export function ConfirmButton({
-  label,
-  confirmLabel,
-  busyLabel,
-  onConfirm,
-}: {
-  label: string
-  confirmLabel: string
-  busyLabel: string
-  onConfirm: () => Promise<unknown>
-}) {
-  const [armed, setArmed] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!armed) return
-    const t = setTimeout(() => setArmed(false), 4000)
-    return () => clearTimeout(t)
-  }, [armed])
-
-  const run = async () => {
-    setBusy(true)
-    setError(null)
-    try {
-      await onConfirm()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(false)
-      setArmed(false)
-    }
-  }
-
-  return (
-    <span className="inline-flex items-center gap-2">
-      {error && <span className="text-red-400 text-xs">{error}</span>}
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => (armed ? void run() : setArmed(true))}
-        className={`shrink-0 text-xs px-2 py-0.5 rounded border transition-colors disabled:opacity-40 ${
-          armed
-            ? 'border-red-700 text-red-400 hover:bg-red-950'
-            : 'border-neutral-700 text-neutral-400 hover:bg-neutral-800'
-        }`}
-      >
-        {busy ? busyLabel : armed ? confirmLabel : label}
-      </button>
-    </span>
-  )
-}
-
-const cardClass =
-  'block border border-neutral-800 hover:border-neutral-600 rounded px-3 py-2 transition-colors'
-
-const iconButtonClass =
-  'inline-flex shrink-0 items-center justify-center rounded p-1 text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800 transition-colors disabled:opacity-40'
-
-const fieldClass =
-  'bg-neutral-900 border border-neutral-800 focus:border-neutral-600 rounded px-2 py-1 text-sm text-neutral-100 outline-none font-normal'
-
-/** ConfirmButton's heavier sibling: gated on typing `phrase` back. Collapsed
-    until opened, which reveals `children` (what deleting costs). */
-export function DangerZone({
-  phrase,
-  label,
-  busyLabel,
-  onConfirm,
-  children,
-}: {
-  phrase: string
-  label: string
-  busyLabel: string
-  onConfirm: () => Promise<unknown>
-  children: ReactNode
-}) {
-  const [open, setOpen] = useState(false)
-  const [typed, setTyped] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const armed = typed.trim().toLowerCase() === phrase.toLowerCase()
-
-  const close = () => {
-    setOpen(false)
-    setTyped('')
-    setError(null)
-  }
-
-  const run = async () => {
-    setBusy(true)
-    setError(null)
-    try {
-      await onConfirm()
-      // Left busy: callers navigate away from what they deleted.
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-      setBusy(false)
-    }
-  }
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="self-start rounded border border-neutral-700 px-2 py-0.5 text-xs text-neutral-400 hover:border-red-800 hover:text-red-400 transition-colors"
-      >
-        {label}
-      </button>
-    )
-  }
-
-  return (
-    <div className="flex flex-col gap-3 rounded border border-red-900/60 bg-red-950/20 p-3">
-      {children}
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          autoFocus
-          value={typed}
-          onChange={(e) => setTyped(e.target.value)}
-          placeholder={phrase}
-          aria-label={`type ${phrase} to confirm`}
-          className={`${fieldClass} font-mono`}
-        />
-        <button
-          type="button"
-          disabled={!armed || busy}
-          onClick={() => void run()}
-          className="rounded border border-red-800 px-3 py-1 text-sm text-red-400 hover:bg-red-950 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
-        >
-          {busy ? busyLabel : label}
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={close}
-          className="px-2 py-1 text-sm text-neutral-500 hover:text-neutral-200 disabled:opacity-40 transition-colors"
-        >
-          cancel
-        </button>
-        {!armed && (
-          <span className="text-neutral-600 text-xs">
-            type <span className="font-mono">{phrase}</span> to enable
-          </span>
-        )}
-      </div>
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-    </div>
-  )
-}
-
-const iconProps = {
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 2,
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
-  className: 'h-3.5 w-3.5',
-} as const
-
-const PencilIcon = () => (
-  <svg {...iconProps}>
-    <path d="M12 20h9" />
-    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7.5 18.5 3 20l1.5-4.5Z" />
-  </svg>
-)
-
-const CheckIcon = () => (
-  <svg {...iconProps}>
-    <path d="m5 13 4 4L19 7" />
-  </svg>
-)
-
-const CloseIcon = () => (
-  <svg {...iconProps}>
-    <path d="M18 6 6 18M6 6l12 12" />
-  </svg>
-)
-
-/** Edit-in-place for one field. `children` is the inline display, `value` the
-    raw string. Enter saves (⌘/Ctrl+Enter when `multiline`), Escape cancels. */
-export function InlineEdit({
-  value,
-  onSave,
-  label,
-  editable = false,
-  multiline = false,
-  placeholder,
-  hint,
-  inputClass = '',
-  children,
-}: {
-  value: string
-  onSave: (next: string) => Promise<unknown>
-  label: string
-  editable?: boolean
-  multiline?: boolean
-  placeholder?: string
-  hint?: string
-  inputClass?: string
-  children: ReactNode
-}) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(value)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const cancel = () => {
-    setEditing(false)
-    setError(null)
-  }
-
-  const save = async () => {
-    if (draft === value) return cancel()
-    setBusy(true)
-    try {
-      await onSave(draft)
-      setEditing(false)
-      setError(null)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const onKeyDown = (e: ReactKeyboardEvent) => {
-    if (e.key === 'Escape') cancel()
-    else if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) {
-      e.preventDefault()
-      void save()
-    }
-  }
-
-  if (!editable) return <>{children}</>
-
-  if (!editing) {
-    return (
-      <span
-        className={`inline-flex gap-1 ${multiline ? 'items-start' : 'items-center'}`}
-      >
-        {children}
-        <button
-          type="button"
-          aria-label={label}
-          title={label}
-          onClick={() => {
-            setDraft(value)
-            setError(null)
-            setEditing(true)
-          }}
-          className={iconButtonClass}
-        >
-          <PencilIcon />
-        </button>
-      </span>
-    )
-  }
-
-  // Not disabled while saving: that would blur it, stranding a rejected save.
-  const field = multiline ? (
-    <textarea
-      autoFocus
-      rows={3}
-      value={draft}
-      placeholder={placeholder}
-      onChange={(e) => setDraft(e.target.value)}
-      onKeyDown={onKeyDown}
-      className={`${fieldClass} w-full resize-y ${inputClass}`}
-    />
-  ) : (
-    <input
-      autoFocus
-      value={draft}
-      placeholder={placeholder}
-      onChange={(e) => setDraft(e.target.value)}
-      onKeyDown={onKeyDown}
-      className={`${fieldClass} ${inputClass}`}
-    />
-  )
-
-  const actions = (
-    <span className="inline-flex flex-wrap items-center gap-1">
-      <button
-        type="button"
-        aria-label="save"
-        title="save"
-        disabled={busy}
-        onClick={() => void save()}
-        className={`${iconButtonClass} hover:text-green-400`}
-      >
-        <CheckIcon />
-      </button>
-      <button
-        type="button"
-        aria-label="cancel"
-        title="cancel"
-        disabled={busy}
-        onClick={cancel}
-        className={`${iconButtonClass} hover:text-red-400`}
-      >
-        <CloseIcon />
-      </button>
-      {error ? (
-        <span className="text-red-400 text-xs font-normal">{error}</span>
-      ) : (
-        hint && <span className="text-neutral-600 text-xs font-normal">{hint}</span>
-      )}
-    </span>
-  )
-
-  return multiline ? (
-    <span className="flex flex-col items-start gap-1 w-full max-w-xl">
-      {field}
-      {actions}
-    </span>
-  ) : (
-    <span className="inline-flex flex-wrap items-center gap-1">
-      {field}
-      {actions}
-    </span>
-  )
-}
-
-/** Keyword pills — an engine's tags. */
-export function TagPills({ tags }: { tags: string[] }) {
-  return (
-    <span className="inline-flex flex-wrap items-center gap-1.5">
-      {tags.map((tag) => (
-        <span
-          key={tag}
-          className="rounded-full border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-400"
-        >
-          {tag}
-        </span>
-      ))}
-    </span>
-  )
-}
-
-const RATING_CATEGORIES: RatingCategory[] = ['bullet', 'blitz', 'rapid']
-
-/** One chip per category the version has rated games in. */
-export function RatingChips({
-  ratings,
-}: {
-  ratings: { [key in RatingCategory]?: Rating }
-}) {
-  const rated = RATING_CATEGORIES.flatMap((c) => {
-    const r = ratings[c]
-    return r ? [{ category: c, rating: r }] : []
-  })
-  if (rated.length === 0) return null
-  return (
-    <span className="inline-flex flex-wrap items-center gap-1.5">
-      {rated.map(({ category, rating }) => (
-        <span
-          key={category}
-          title={`${rating.games} rated ${rating.games === 1 ? 'game' : 'games'}, rating deviation ${Math.round(rating.phi)}`}
-          className="inline-flex items-baseline gap-1 rounded border border-neutral-800 bg-neutral-900 px-1.5 py-0.5 text-xs"
-        >
-          <span className="text-neutral-500">{category}</span>
-          <span className="tabular-nums text-neutral-200">
-            {formatRating(rating)}
-          </span>
-          <span className="tabular-nums text-neutral-600">
-            ±{Math.round(rating.phi)}
-          </span>
-        </span>
-      ))}
-    </span>
-  )
-}
-
-export function RatingDelta({ delta }: { delta: number }) {
-  const n = Math.round(delta)
-  const tone =
-    n > 0 ? 'text-green-400' : n < 0 ? 'text-red-400' : 'text-neutral-500'
-  return <span className={`tabular-nums ${tone}`}>{formatDelta(delta)}</span>
-}
+import { gameUrl, type Game, type TournamentStatus } from './api'
+import { barFill } from './eval'
+import { formatClock } from './format'
+import { finishedMeta, moveNumber, resultText } from './games'
+import { formatTc } from './tc'
+import { Hint, LiveDot } from './ui'
 
 /** Fields shared by `Game` and the lean `TournamentGameRow`. */
-export type GameRowData = Pick<
+type GameRowData = Pick<
   Game,
   | 'id'
   | 'white_name'
@@ -497,33 +22,65 @@ export type GameRowData = Pick<
   | 'ended_at'
 >
 
-export function GameRow({ game }: { game: GameRowData }) {
+function defaultMeta(game: GameRowData): ReactNode {
+  if (game.status === 'playing') return 'In progress'
+  if (game.status === 'pending') return 'Pending'
+  if (game.status === 'aborted') {
+    return (
+      <>
+        <span className="text-loss">Aborted</span> · {finishedMeta(game)}
+      </>
+    )
+  }
+  return finishedMeta(game)
+}
+
+/** "white – black", a meta line and the result: one hairline row. */
+export function GameRow({
+  game,
+  meta,
+  active = false,
+  showResult = true,
+}: {
+  game: GameRowData
+  meta?: ReactNode
+  active?: boolean
+  showResult?: boolean
+}) {
   return (
-    <Link to={gameUrl(game.id)} className={cardClass}>
-      <div className="flex items-center gap-2 text-sm">
-        <span className="font-medium">{game.white_name}</span>
-        <span className="text-neutral-500">vs</span>
-        <span className="font-medium">{game.black_name}</span>
-        {game.status === 'aborted' ? (
-          <span className="ml-auto text-xs text-amber-500/80">aborted</span>
-        ) : (
-          <span className="ml-auto font-mono text-xs text-neutral-400">
-            {game.status === 'playing' ? '…' : (game.result ?? '*')}
-          </span>
-        )}
-      </div>
-      <div className="text-xs text-neutral-500 mt-0.5">
-        {relativeTime(game.ended_at ?? game.created_at)}
-        {game.reason && <> · {game.reason}</>}
-      </div>
+    <Link
+      to={gameUrl(game.id)}
+      className={`flex items-center gap-2 border-b border-line-row py-[9px] text-sm transition-colors ${
+        active ? '-mx-2 rounded bg-accent/10 px-2' : 'hover:bg-surface'
+      }`}
+    >
+      <span className="min-w-0 truncate">{game.white_name}</span>
+      <span className="text-faint">–</span>
+      <span className="min-w-0 truncate">{game.black_name}</span>
+      <span
+        className={`ml-auto shrink-0 whitespace-nowrap pl-2 text-xs ${active ? 'text-accent' : 'text-faint'}`}
+      >
+        {meta ?? defaultMeta(game)}
+      </span>
+      {showResult && (
+        <span className="num w-11 shrink-0 text-right text-meta font-medium">
+          {resultText(game)}
+        </span>
+      )}
     </Link>
   )
 }
 
-export function GameList({ games }: { games: GameRowData[] }) {
-  if (games.length === 0) return <Hint>no games yet</Hint>
+export function GameList({
+  games,
+  empty = 'No games yet',
+}: {
+  games: GameRowData[]
+  empty?: string
+}) {
+  if (games.length === 0) return <Hint>{empty}</Hint>
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col">
       {games.map((g) => (
         <GameRow key={g.id} game={g} />
       ))}
@@ -531,9 +88,40 @@ export function GameList({ games }: { games: GameRowData[] }) {
   )
 }
 
-/** A live game's board preview, on the dashboard and tournament pages. */
+/** A thin vertical eval bar, White's share filled from the bottom. */
+function MiniEvalBar({ game }: { game: Game }) {
+  const fill = barFill(game.score ?? null)
+  return (
+    <div className="relative w-1.5 shrink-0 overflow-hidden rounded-sm bg-track">
+      <div
+        className="absolute inset-x-0 bottom-0 bg-fg transition-[height] duration-300"
+        style={{ height: `${fill * 100}%` }}
+      />
+    </div>
+  )
+}
+
+function CardPlayer({
+  name,
+  clock,
+  toMove,
+}: {
+  name: string
+  clock: number
+  toMove: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 text-sm">
+      <span className="min-w-0 truncate font-medium">{name}</span>
+      <span className={`num shrink-0 text-meta ${toMove ? 'text-fg' : 'text-muted'}`}>
+        {formatClock(clock)}
+      </span>
+    </div>
+  )
+}
+
+/** A live game's board preview, on the home and tournament pages. */
 export function LiveGameCard({ game }: { game: Game }) {
-  const moveNo = Math.max(1, Math.ceil(game.moves.length / 2))
   // A fresh config would redraw the board on every render.
   const config = useMemo(
     (): Config => ({
@@ -544,32 +132,49 @@ export function LiveGameCard({ game }: { game: Game }) {
     }),
     [game.fen],
   )
+  const whiteToMove = game.fen.split(' ')[1] !== 'b'
   return (
-    <Link
-      to={gameUrl(game.id)}
-      className="group flex flex-col gap-2 rounded-lg border border-neutral-800 hover:border-neutral-600 bg-neutral-900/60 p-3 transition-colors"
-    >
-      <Chessground className="!w-full" config={config} />
-      <div className="flex items-center gap-2 text-sm">
-        <span className="font-medium truncate">{game.white_name}</span>
-        <span className="text-neutral-500">vs</span>
-        <span className="font-medium truncate">{game.black_name}</span>
+    <Link to={gameUrl(game.id)} className="group flex min-w-0 flex-col gap-2">
+      <CardPlayer
+        name={game.black_name}
+        clock={game.black_clock}
+        toMove={!whiteToMove}
+      />
+      <div className="flex gap-1.5">
+        <MiniEvalBar game={game} />
+        <div className="min-w-0 flex-1 transition-opacity group-hover:opacity-90">
+          <Chessground className="!w-full" config={config} />
+        </div>
       </div>
-      <div className="flex items-center gap-2 text-xs text-neutral-500">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-          live
-        </span>
-        <span className="ml-auto">move {moveNo}</span>
-      </div>
+      <CardPlayer
+        name={game.white_name}
+        clock={game.white_clock}
+        toMove={whiteToMove}
+      />
+      <span className="truncate text-xs text-faint">
+        {game.tournament_name ?? 'Casual'} · move {moveNumber(game.moves.length)}
+        {game.tc && (
+          <>
+            {' · '}
+            <span className="num">{formatTc(game.tc)}</span>
+          </>
+        )}
+      </span>
     </Link>
   )
 }
 
-/** Responsive grid of live game cards (the dashboard's live section). */
-export function LiveGameGrid({ games }: { games: Game[] }) {
+export function LiveGameGrid({
+  games,
+  columns = 4,
+}: {
+  games: Game[]
+  columns?: 2 | 4
+}) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div
+      className={`grid grid-cols-2 gap-5 ${columns === 4 ? 'md:grid-cols-3 lg:grid-cols-4 lg:gap-6' : ''}`}
+    >
       {games.map((g) => (
         <LiveGameCard key={g.id} game={g} />
       ))}
@@ -577,228 +182,42 @@ export function LiveGameGrid({ games }: { games: Game[] }) {
   )
 }
 
-export function EngineRow({ engine }: { engine: Engine }) {
-  return (
-    <Link to={engineUrl(engine)} className={cardClass}>
-      <div className="flex items-center gap-2 text-sm">
-        <span className="font-medium text-neutral-100">
-          {engine.owner_login}/{engine.name}
-        </span>
-        {engine.version_count === 0 ? (
-          <span className="ml-auto text-xs text-amber-500/80">no versions</span>
-        ) : (
-          <span className="ml-auto text-xs text-neutral-500">
-            {engine.version_count}{' '}
-            {engine.version_count === 1 ? 'version' : 'versions'}
-          </span>
-        )}
-      </div>
-      {engine.description && (
-        <div className="text-xs text-neutral-500 mt-0.5">
-          {engine.description}
-        </div>
-      )}
-      {engine.ratings && Object.keys(engine.ratings).length > 0 && (
-        <div className="mt-1.5">
-          <RatingChips ratings={engine.ratings} />
-        </div>
-      )}
-      {engine.tags.length > 0 && (
-        <div className="mt-1.5">
-          <TagPills tags={engine.tags} />
-        </div>
-      )}
-    </Link>
-  )
+const STATUS_LABEL: Record<TournamentStatus, string> = {
+  running: 'Running',
+  completed: 'Completed',
+  aborted: 'Aborted',
 }
 
-export function EngineList({ engines }: { engines: Engine[] }) {
-  if (engines.length === 0) return <Hint>no engines yet</Hint>
-  return (
-    <div className="flex flex-col gap-2">
-      {engines.map((e) => (
-        <EngineRow key={e.id} engine={e} />
-      ))}
-    </div>
-  )
-}
-
-/** Small green/grey dot indicating a runner's online status. */
-export function StatusDot({ online }: { online: boolean }) {
-  return (
-    <span
-      className={`inline-block h-2 w-2 rounded-full ${
-        online ? 'bg-green-500' : 'bg-neutral-600'
-      }`}
-      aria-label={online ? 'online' : 'offline'}
-    />
-  )
-}
-
-/** A labeled utilization bar (0–100%). `detail` overrides the "NN%" readout. */
-export function Meter({
-  label,
-  percent,
-  detail,
-}: {
-  label: string
-  percent: number
-  detail?: string
-}) {
-  const pct = Math.max(0, Math.min(100, percent))
-  return (
-    <div className="flex-1 flex flex-col gap-1 min-w-0">
-      <div className="flex justify-between text-xs">
-        <span className="text-neutral-500">{label}</span>
-        <span className="text-neutral-300 tabular-nums">
-          {detail ?? `${pct.toFixed(0)}%`}
-        </span>
-      </div>
-      <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
-        <div
-          className="h-full bg-green-500 transition-[width] duration-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  )
-}
-
-// Live status, when present, wins over the polled row.
-export function RunnerRow({
-  runner,
-  live,
-}: {
-  runner: Runner
-  live?: RunnerLive
-}) {
-  const online = live?.online ?? runner.online
-  const activeGames = live?.active_games ?? runner.active_games
-  const telemetry = live?.telemetry ?? runner.telemetry
-  return (
-    <Link to={runnerUrl(runner.runner_id)} className={cardClass}>
-      <div className="flex items-center gap-2 text-sm">
-        <StatusDot online={online} />
-        <span className="font-medium text-neutral-100">{runner.name}</span>
-        <span className="text-xs text-neutral-500">{runner.owner_login}</span>
-        <span className="ml-auto text-xs text-neutral-500">
-          {online
-            ? `${activeGames}/${runner.max_games} games`
-            : runner.last_seen_at
-              ? `seen ${relativeTime(runner.last_seen_at)}`
-              : 'offline'}
-        </span>
-      </div>
-      {online && telemetry && (
-        <div className="flex gap-4 mt-2">
-          <Meter label="cpu" percent={telemetry.cpu_percent} />
-          <Meter label="ram" percent={telemetry.ram_percent} />
-        </div>
-      )}
-      {runner.description && (
-        <div className="text-xs text-neutral-500 mt-0.5">
-          {runner.description}
-        </div>
-      )}
-    </Link>
-  )
-}
-
-export function RunnerList({
-  runners,
-  live,
-}: {
-  runners: Runner[]
-  live?: Map<string, RunnerLive>
-}) {
-  if (runners.length === 0) return <Hint>no runners registered</Hint>
-  return (
-    <div className="flex flex-col gap-2">
-      {runners.map((r) => (
-        <RunnerRow key={r.runner_id} runner={r} live={live?.get(r.runner_id)} />
-      ))}
-    </div>
-  )
-}
-
-const STATUS_STYLES: Record<TournamentStatus, string> = {
-  running: 'text-green-400 border-green-800',
-  completed: 'text-neutral-300 border-neutral-700',
-  aborted: 'text-amber-500/90 border-amber-800',
-}
-
-/** Small outlined pill for a tournament's status. */
 export function TournamentStatusPill({ status }: { status: TournamentStatus }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${STATUS_STYLES[status]}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs ${
+        status === 'running'
+          ? 'border-accent/45 text-accent'
+          : status === 'aborted'
+            ? 'border-line-strong text-loss'
+            : 'border-line-strong text-muted'
+      }`}
     >
-      {status === 'running' && (
-        <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-      )}
-      {status}
+      {status === 'running' && <LiveDot />}
+      {STATUS_LABEL[status]}
     </span>
   )
 }
 
-export function TournamentRow({ tournament: t }: { tournament: Tournament }) {
+/** The status as plain coloured text, where a pill would be too loud. */
+export function TournamentStatusText({ status }: { status: TournamentStatus }) {
   return (
-    <Link to={tournamentUrl(t.id)} className={cardClass}>
-      <div className="flex items-center gap-2 text-sm">
-        <span className="font-medium text-neutral-100 truncate">{t.name}</span>
-        <span className="text-xs text-neutral-500">{formatLabel(t.format)}</span>
-        <span className="ml-auto shrink-0">
-          <TournamentStatusPill status={t.status} />
-        </span>
-      </div>
-      <div className="text-xs text-neutral-500 mt-1 flex items-center gap-2">
-        <span>{t.participant_count} engines</span>
-        <span>·</span>
-        <span className="tabular-nums">
-          {t.games_completed}/{t.games_total} games
-        </span>
-        <span className="ml-auto">
-          {relativeTime(t.ended_at ?? t.created_at)}
-        </span>
-      </div>
-    </Link>
-  )
-}
-
-export function TournamentList({ tournaments }: { tournaments: Tournament[] }) {
-  if (tournaments.length === 0) return <Hint>no tournaments yet</Hint>
-  return (
-    <div className="flex flex-col gap-2">
-      {tournaments.map((t) => (
-        <TournamentRow key={t.id} tournament={t} />
-      ))}
-    </div>
-  )
-}
-
-/** A freshly minted API token: shown once, with a copy button. */
-export function FreshToken({ token }: { token: string }) {
-  const [copied, setCopied] = useState(false)
-
-  const copy = async () => {
-    await navigator.clipboard.writeText(token)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <code className="flex-1 bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm font-mono text-neutral-200 break-all">
-          {token}
-        </code>
-        <PrimaryButton onClick={() => void copy()} className="px-3 py-2 shrink-0">
-          {copied ? 'copied' : 'copy'}
-        </PrimaryButton>
-      </div>
-      <p className="text-amber-500/80 text-xs">
-        Copy it now — for security it won't be shown again.
-      </p>
-    </div>
+    <span
+      className={`text-xs ${
+        status === 'running'
+          ? 'text-accent'
+          : status === 'aborted'
+            ? 'text-loss'
+            : 'text-muted'
+      }`}
+    >
+      {STATUS_LABEL[status]}
+    </span>
   )
 }

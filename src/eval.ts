@@ -5,7 +5,7 @@ export type Side = 'white' | 'black'
 
 /** A score in White's frame (UCI's own is the mover's). Exactly one of `cp`
     and `mate` is set; `mate` is negative when Black mates. */
-export type Eval = { cp: number | null; mate: number | null }
+export type Eval = { cp?: number | null; mate?: number | null }
 
 export function toWhite(
   info: SearchInfo | null | undefined,
@@ -18,16 +18,9 @@ export function toWhite(
   return null
 }
 
-/** Unsigned, for the 24px eval bar, whose end already says who is better. */
-export function formatEvalShort(e: Eval | null): string {
-  if (!e) return '·'
-  if (e.mate !== null) return `M${Math.abs(e.mate)}`
-  return (Math.abs(e.cp ?? 0) / 100).toFixed(1)
-}
-
 export function formatEval(e: Eval | null): string {
   if (!e) return '—'
-  if (e.mate !== null) return `${e.mate < 0 ? '-' : ''}M${Math.abs(e.mate)}`
+  if (e.mate != null) return `${e.mate < 0 ? '-' : ''}M${Math.abs(e.mate)}`
   const pawns = (e.cp ?? 0) / 100
   return `${pawns > 0 ? '+' : ''}${pawns.toFixed(2)}`
 }
@@ -35,7 +28,7 @@ export function formatEval(e: Eval | null): string {
 /** White's share of an eval bar, 0–1, through the usual logistic squash. */
 export function barFill(e: Eval | null): number {
   if (!e) return 0.5
-  if (e.mate !== null) return e.mate < 0 ? 0 : 1
+  if (e.mate != null) return e.mate < 0 ? 0 : 1
   return 1 / (1 + Math.exp(-0.00368208 * (e.cp ?? 0)))
 }
 

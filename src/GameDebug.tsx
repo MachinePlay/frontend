@@ -20,11 +20,11 @@ function keep(line: LoggedLine, f: Filters): boolean {
 }
 
 const lineColor = (line: LoggedLine): string => {
-  if (line.sent) return 'text-neutral-500'
-  if (line.text.startsWith('bestmove')) return 'text-green-400'
-  if (line.text.startsWith('info string')) return 'text-amber-500/80'
-  if (line.text.startsWith('info')) return 'text-neutral-400'
-  return 'text-neutral-300'
+  if (line.sent) return 'text-faint'
+  if (line.text.startsWith('bestmove')) return 'text-fg font-medium'
+  if (line.text.startsWith('info string')) return 'text-muted italic'
+  if (line.text.startsWith('info')) return 'text-muted'
+  return 'text-fg'
 }
 
 /** Memoized, so a batch mounts only its own rows; inline flow, not flex, since
@@ -34,7 +34,7 @@ const LogRow = memo(function LogRow({ line }: { line: LoggedLine }) {
     <div className="whitespace-pre">
       <span
         className={
-          line.side === 'white' ? 'text-neutral-200' : 'text-neutral-500'
+          line.side === 'white' ? 'text-fg' : 'text-faint'
         }
         title={`${line.side} engine, ply ${line.ply}`}
       >
@@ -60,13 +60,13 @@ function Toggle({
   return (
     <label
       title={title}
-      className="flex items-center gap-1 cursor-pointer select-none hover:text-neutral-300"
+      className="flex items-center gap-1 cursor-pointer select-none hover:text-fg"
     >
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="w-3 h-3 accent-neutral-400"
+        className="w-3 h-3 accent-[#a39f97]"
       />
       {label}
     </label>
@@ -107,28 +107,28 @@ export function GameDebug({
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="flex items-center gap-2 px-2 py-1 border-b border-neutral-800 text-[10px] text-neutral-500">
+      <div className="flex items-center gap-3 px-3 py-1.5 border-b border-line text-xs text-faint">
         <Toggle
           label="W"
-          title="white engine"
+          title="White engine"
           checked={filters.white}
           onChange={set('white')}
         />
         <Toggle
           label="B"
-          title="black engine"
+          title="Black engine"
           checked={filters.black}
           onChange={set('black')}
         />
         <Toggle
           label="sent"
-          title="commands sent to the engines"
+          title="Commands sent to the engines"
           checked={filters.sent}
           onChange={set('sent')}
         />
         <Toggle
           label="info"
-          title="search info lines (info string always shows)"
+          title="Search info lines (info string always shows)"
           checked={filters.info}
           onChange={set('info')}
         />
@@ -141,15 +141,15 @@ export function GameDebug({
           pinned.current =
             box.scrollHeight - box.scrollTop - box.clientHeight < 24
         }}
-        className="flex-1 min-h-0 overflow-auto px-2 py-1 font-mono text-[10px] leading-relaxed"
+        className="flex-1 min-h-0 overflow-auto px-3 py-1.5 font-mono text-[11px] leading-relaxed"
       >
         {shown.length === 0 ? (
-          <p className="text-neutral-600 italic">
+          <p className="font-sans text-xs text-faint">
             {lines.length > 0
-              ? 'nothing matches those filters'
+              ? 'Nothing matches those filters'
               : live
-                ? 'waiting for the engines to say something…'
-                : 'no transcript kept for this game'}
+                ? 'Waiting for the engines to say something…'
+                : 'No transcript kept for this game'}
           </p>
         ) : (
           <>
@@ -157,9 +157,9 @@ export function GameDebug({
               <button
                 type="button"
                 onClick={() => setShowAll(true)}
-                className="mb-1 text-neutral-500 hover:text-neutral-300 underline decoration-dotted"
+                className="mb-1 text-faint hover:text-fg underline decoration-dotted"
               >
-                show {hidden} earlier lines
+                Show {hidden} earlier lines
               </button>
             )}
             {shown.map((line) => (

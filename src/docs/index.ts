@@ -20,8 +20,8 @@ export type Doc = {
 
 export const DOCS: Doc[] = [
   { slug: '', title: 'About MachinePlay.org', source: about, draft: false },
-  { slug: 'engine-tutorial', title: 'Engine Tutorial', source: engineTutorial, draft: true },
-  { slug: 'add-runner', title: 'Add runner', source: addRunner, draft: true },
+  { slug: 'engine-tutorial', title: 'Engine tutorial', source: engineTutorial, draft: true },
+  { slug: 'add-runner', title: 'Add a runner', source: addRunner, draft: true },
 ]
 
 export function docPath(doc: Doc): string {

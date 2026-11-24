@@ -11,6 +11,14 @@ export const TC_PRESETS = [
 
 export const DEFAULT_TC = '30+0.3'
 
+/** "180+2" → "3+2", "30+0.3" → "30s+0.3", "10+0" → "10s". */
+export function formatTc(tc: string): string {
+  const [base, inc] = tc.split('+')
+  const seconds = Number(base)
+  const head = seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60}` : `${base}s`
+  return inc && Number(inc) !== 0 ? `${head}+${inc}` : head
+}
+
 // Mirrors `category` in backend/app/ratings.py.
 export function ratingCategory(tc: string): RatingCategory {
   const [base, inc] = tc.split('+')

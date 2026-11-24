@@ -1,18 +1,59 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+@theme {
+  --color-bg: #0f0e0d;
+  --color-surface: #171614;
+  --color-surface-2: #1d1b19;
+  --color-line: #2a2825;
+  --color-line-strong: #3a3733;
+  --color-line-row: #1f1d1b;
+  --color-track: #2f2c28;
+  --color-fg: #f0eee9;
+  --color-muted: #a39f97;
+  --color-faint: #857f77;
+  --color-accent: oklch(0.82 0.13 78);
+  --color-win: oklch(0.8 0.14 150);
+  --color-loss: oklch(0.72 0.15 28);
+
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --text-meta: 13px;
+  --text-meta--line-height: 18px;
+  --text-md: 15px;
+  --text-md--line-height: 22px;
+  --text-section: 18px;
+  --text-section--line-height: 24px;
+  --text-title: 28px;
+  --text-title--line-height: 34px;
+  --text-display: 30px;
+  --text-display--line-height: 36px;
+}
+
+/* Numbers, clocks, moves, ratings: mono with tabular figures. */
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
 html,
 body {
-  background: #0a0a0a; /* neutral-950 — prevents white gap on scroll bounce */
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
 }
 
 :root {
-  /* Two eval bars, their gap, and the gap to the board. */
-  --eval-bars: 3.75rem;
+  color-scheme: dark;
+  /* Two 14px eval bars, their gap, and the gap to the board. */
+  --eval-bars: 44px;
   --board-size: min(
     calc(100vw - 2rem - var(--eval-bars)),
-    calc(100dvh - 8rem),
-    480px
+    calc(100dvh - 10rem),
+    560px
   );
 }
 
@@ -36,6 +77,8 @@ body {
   width: var(--board-size);
   aspect-ratio: 1;
   position: relative;
+  border-radius: 3px;
+  overflow: hidden;
 }
 
 .cg-wrap.captured-pieces {
@@ -45,22 +88,14 @@ body {
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
-  min-height: 1.75rem;
-  background: #f0d9b5;
-  border-radius: 0.25rem;
-  padding: 0 0.375rem;
-}
-
-.cg-wrap.captured-pieces:empty {
-  background: transparent;
-  padding: 0;
+  overflow: visible;
 }
 
 .cg-wrap.captured-pieces piece {
   position: relative;
   display: inline-block;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.125rem;
+  height: 1.125rem;
   top: auto;
   left: auto;
   background-size: contain;
@@ -69,27 +104,76 @@ body {
 }
 
 .cg-wrap.captured-pieces piece + piece {
-  margin-left: -0.25rem;
+  margin-left: -0.375rem;
 }
 
 /* Rendered markdown from src/docs. */
 
 .docs-prose {
+  --tw-prose-body: #d6d2ca;
+  --tw-prose-headings: var(--color-fg);
+  --tw-prose-lead: var(--color-muted);
+  --tw-prose-links: var(--color-fg);
+  --tw-prose-bold: var(--color-fg);
+  --tw-prose-counters: var(--color-faint);
+  --tw-prose-bullets: var(--color-faint);
+  --tw-prose-hr: var(--color-line);
+  --tw-prose-quotes: var(--color-muted);
+  --tw-prose-quote-borders: var(--color-line-strong);
+  --tw-prose-captions: var(--color-faint);
+  --tw-prose-code: var(--color-fg);
+  --tw-prose-pre-code: var(--color-fg);
+  --tw-prose-pre-bg: var(--color-surface);
+  --tw-prose-th-borders: var(--color-line);
+  --tw-prose-td-borders: var(--color-line-row);
+  font-size: 16px;
+  line-height: 27px;
+
+  & a {
+    text-decoration-color: var(--color-line-strong);
+    text-underline-offset: 3px;
+    font-weight: 400;
+    &:hover {
+      text-decoration-color: var(--color-muted);
+    }
+  }
+
+  & h1 {
+    font-size: 34px;
+    line-height: 40px;
+    font-weight: 600;
+  }
+  & h2 {
+    font-size: 22px;
+    line-height: 30px;
+    font-weight: 600;
+  }
+  & h3 {
+    font-size: 18px;
+    line-height: 26px;
+    font-weight: 600;
+  }
+
   /* Docs are code-heavy: no typographic backticks around inline code. */
   & :where(code):not(:where(pre *))::before,
   & :where(code):not(:where(pre *))::after {
     content: none;
   }
   & :where(code):not(:where(pre *)) {
-    background: var(--color-neutral-900);
-    border: 1px solid var(--color-neutral-800);
-    border-radius: 0.25rem;
-    padding: 0.1em 0.3em;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 0.875em;
     font-weight: 400;
   }
   & pre {
-    background: var(--color-neutral-900);
-    border: 1px solid var(--color-neutral-800);
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    padding: 16px 18px;
+    font-size: 14px;
+    line-height: 22px;
   }
   /* highlight.js's theme pads and colours its own box; the <pre> already does. */
   & pre code.hljs {
@@ -102,6 +186,7 @@ body {
     scroll-margin-top: 1rem;
     & > a {
       color: inherit;
+      font-weight: inherit;
       text-decoration: none;
     }
   }
@@ -109,57 +194,64 @@ body {
   & h1:not(:first-child) {
     margin-top: 3.5rem;
     padding-top: 2rem;
-    border-top: 1px solid var(--color-neutral-800);
-    font-size: 1.875em;
+    border-top: 1px solid var(--color-line);
+    font-size: 30px;
+    line-height: 36px;
   }
 
   & table {
     display: block;
     overflow-x: auto;
+    font-size: 14px;
   }
 
   & details {
     margin: 1.25em 0;
     padding: 0.5rem 1rem;
-    border: 1px solid var(--color-neutral-800);
-    border-radius: 0.375rem;
-    background: color-mix(in oklab, var(--color-neutral-900) 60%, transparent);
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    background: var(--color-surface);
     & > summary {
       cursor: pointer;
-      color: var(--color-neutral-300);
+      color: var(--color-fg);
     }
   }
 
   & .markdown-alert {
     margin: 1.25em 0;
-    padding: 0.5rem 1rem;
-    border-left: 3px solid var(--color-sky-600);
-    background: color-mix(in oklab, var(--color-sky-950) 40%, transparent);
-    border-radius: 0 0.25rem 0.25rem 0;
-    & > :first-child { margin-top: 0; }
-    & > :last-child { margin-bottom: 0; }
+    padding: 14px 18px;
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    background: var(--color-surface);
+    font-size: 15px;
+    line-height: 24px;
+    color: var(--color-fg);
+    & > :first-child {
+      margin-top: 0;
+    }
+    & > :last-child {
+      margin-bottom: 0;
+    }
   }
   & .markdown-alert-title {
+    margin-bottom: 4px;
+    font-size: 12px;
     font-weight: 600;
-    font-size: 0.8em;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    & svg { display: inline; fill: currentColor; margin-right: 0.4em; vertical-align: -0.15em; }
-  }
-  & .markdown-alert-note .markdown-alert-title { color: var(--color-sky-300); }
-  & .markdown-alert-todo {
-    border-left-color: var(--color-amber-500);
-    background: color-mix(in oklab, var(--color-amber-950) 45%, transparent);
-    & .markdown-alert-title { color: var(--color-amber-300); }
+    color: var(--color-accent);
+    & svg {
+      display: none;
+    }
   }
 
   /* <game-tree> follows prefers-color-scheme; the site is always dark. */
   & game-tree {
-    --gt-bg: #14161a;
-    --gt-panel: #1b1e24;
-    --gt-fg: #e7e9ee;
-    --gt-muted: #98a1af;
-    --gt-line: #333944;
+    --gt-bg: var(--color-bg);
+    --gt-panel: var(--color-surface);
+    --gt-fg: var(--color-fg);
+    --gt-muted: var(--color-muted);
+    --gt-line: var(--color-line-strong);
     --gt-max: #f4796b;
     --gt-min: #7aa7f5;
     --gt-nega: #fbbf24;

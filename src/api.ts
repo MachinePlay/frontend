@@ -9,8 +9,10 @@ import type {
   GameDetailOut,
   GameOut,
   GameStatus,
+  HandleCheckOut,
   HardwareInfo,
   PendingSignupOut,
+  RunnerDetailOut,
   RunnerLiveEvent,
   RunnerOut,
   SseStreamResponse,
@@ -172,7 +174,7 @@ export const fetchGame = (id: string): Promise<GameDetail> =>
 
 export const fetchRunners = (): Promise<Runner[]> => request('/runners')
 
-export const fetchRunner = (id: string): Promise<Runner> =>
+export const fetchRunner = (id: string): Promise<RunnerDetail> =>
   request(`/runner/${id}`)
 
 export const updateRunner = (
@@ -257,6 +259,9 @@ export const fetchPendingSignup = (): Promise<PendingSignup | null> =>
 export const completeSignup = (login: string): Promise<User> =>
   request('/auth/register', post({ login }))
 
+export const checkHandle = (login: string): Promise<HandleCheck> =>
+  request(`/auth/handle/${encodeURIComponent(login)}`)
+
 export const profileUrl = (login: string): string => `/${login}`
 export const engineUrl = (e: { name: string; owner_login: string }): string =>
   `/${e.owner_login}/${e.name}`
@@ -271,6 +276,8 @@ export type Engine = EngineOut
 export type EngineDetail = EngineDetailOut
 export type EngineVersion = EngineVersionOut
 export type Runner = RunnerOut
+export type RunnerDetail = RunnerDetailOut
+export type HandleCheck = HandleCheckOut
 export type RunnerLive = RunnerLiveEvent
 export type Hardware = HardwareInfo
 export type RunnerTelemetry = Telemetry

@@ -4,23 +4,47 @@ import type { Config } from '@lichess-org/chessground/config'
 import { Chessground } from '../Chessground'
 import {
   cancelGame,
+  isNotFound,
   runnerUrl,
-  type GameStatus,
+  tournamentUrl,
+  type Rating,
   type RatingChange,
   type SearchInfo,
 } from '../api'
 import { useAuth } from '../auth-context'
 import { EvalBar } from '../EvalBar'
 import { evalsAt, formatEval, toWhite } from '../eval'
-import { RatingDelta } from '../components'
-import { formatClock } from '../format'
+import {
+  capitalize,
+  formatClock,
+  formatRating,
+  formatResult,
+} from '../format'
+import { moveNumber } from '../games'
 import { GameDebug } from '../GameDebug'
-import { GameLines } from '../GameLines'
+import { EngineSearch, EvalGraph } from '../GameLines'
+import { MoreFromTournament } from '../MoreFromTournament'
+import { panel } from '../styles'
+import { formatTc, ratingCategory } from '../tc'
+import {
+  ColorChip,
+  ConfirmButton,
+  LiveDot,
+  LoadError,
+  Page,
+  RatingDelta,
+  Tabs,
+} from '../ui'
 import { useGame } from '../useGame'
 import { usePositions } from '../usePositions'
+import NotFound from './NotFound'
 
-const TABS = ['moves', 'lines', 'debug'] as const
-type Tab = (typeof TABS)[number]
+const TABS = [
+  { value: 'moves', label: 'Moves' },
+  { value: 'graph', label: 'Eval graph' },
+  { value: 'log', label: 'UCI log' },
+] as const
+type Tab = (typeof TABS)[number]['value']
 
 const PIECE_NAMES: Record<string, string> = {
   q: 'queen',
@@ -62,6 +86,7 @@ function captured(fen: string): {
 }
 
 function CapturedPieces({ pieces }: { pieces: CapturedPiece[] }) {
+  if (pieces.length === 0) return null
   return (
     <span className="cg-wrap captured-pieces">
       {pieces.map((p, i) => (
@@ -95,10 +120,10 @@ function Clock({
     : base
   return (
     <span
-      className={`ml-auto font-mono tabular-nums px-1.5 py-0.5 rounded ${
+      className={`num ml-auto shrink-0 rounded border px-2.5 py-0.5 text-[22px] font-medium leading-7 ${
         ticking
-          ? 'bg-neutral-100 text-neutral-900'
-          : 'bg-neutral-900 text-neutral-400 border border-neutral-800'
+          ? 'border-fg bg-fg text-bg'
+          : 'border-line bg-surface text-muted'
       }`}
     >
       {formatClock(seconds)}
@@ -110,7 +135,8 @@ function PlayerBar({
   color,
   name,
   version,
-  rating,
+  change,
+  current,
   pieces,
   clock,
   since,
@@ -119,38 +145,37 @@ function PlayerBar({
   color: 'white' | 'black'
   name: string | null
   version: string | null
-  rating: RatingChange | null
+  change: RatingChange | null
+  current: Rating | null
   pieces: CapturedPiece[]
   clock: number | null
   since: number
   active: boolean
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 text-sm max-w-[var(--board-size)]">
-      <span className="text-neutral-500 uppercase tracking-wide text-xs">
-        {color}
-      </span>
-      <span className="text-neutral-100 font-medium">{name ?? '—'}</span>
+    <div className="flex w-[calc(var(--eval-bars)+var(--board-size))] min-h-8 items-center gap-2.5 pl-[var(--eval-bars)] text-md">
+      <ColorChip color={color} />
+      <span className="min-w-0 truncate font-medium">{name ?? '—'}</span>
       {version && (
-        <span className="text-neutral-500 text-xs font-mono">{version}</span>
+        <span className="num shrink-0 text-xs text-faint">{version}</span>
       )}
-      {rating && (
-        <span className="text-xs text-neutral-400 tabular-nums">
-          {Math.round(rating.after)}{' '}
-          <RatingDelta delta={rating.after - rating.before} />
+      {change ? (
+        <span className="shrink-0 text-meta tabular-nums text-muted">
+          {Math.round(change.after)}{' '}
+          <RatingDelta delta={change.after - change.before} />
         </span>
+      ) : (
+        current && (
+          <span className="shrink-0 text-meta tabular-nums text-muted">
+            {formatRating(current)}
+          </span>
+        )
       )}
       <CapturedPieces pieces={pieces} />
-      {clock !== null && (
-        <Clock base={clock} since={since} ticking={active} />
-      )}
+      {clock !== null && <Clock base={clock} since={since} ticking={active} />}
     </div>
   )
 }
-
-/** One numbered pair of plies, memoized for long games. Book moves are dimmed,
-    so they aren't mistaken for an engine's choice. */
-const bookClass = 'text-neutral-500 italic'
 
 const MoveRow = memo(function MoveRow({
   number,
@@ -167,37 +192,29 @@ const MoveRow = memo(function MoveRow({
   bookPlies: number
   onJump: (ply: number) => void
 }) {
-  const whiteBook = number * 2 - 1 <= bookPlies
-  const blackBook = number * 2 <= bookPlies
+  // Book moves are dimmed, so they aren't mistaken for an engine's choice.
+  const cell = (ply: number, san: string, tone: string) => (
+    <button
+      type="button"
+      onClick={() => onJump(ply)}
+      title={ply <= bookPlies ? 'From the opening book' : undefined}
+      className={`min-w-0 truncate rounded-[3px] px-1.5 py-0.5 text-left transition-colors ${
+        activeSide === (ply % 2 ? 'white' : 'black')
+          ? 'bg-fg text-bg'
+          : `hover:bg-surface-2 ${ply <= bookPlies ? 'text-faint' : tone}`
+      }`}
+    >
+      {san}
+    </button>
+  )
   return (
-    <li data-active={activeSide !== null} className="flex gap-2">
-      <span className="text-neutral-500 w-6 shrink-0 text-right">{number}.</span>
-      <button
-        type="button"
-        onClick={() => onJump(number * 2 - 1)}
-        title={whiteBook ? 'from the opening book' : undefined}
-        className={`flex-1 basis-0 min-w-0 text-left px-1 rounded ${
-          activeSide === 'white'
-            ? 'bg-neutral-100 text-neutral-900'
-            : `hover:bg-neutral-800 ${whiteBook ? bookClass : 'text-neutral-100'}`
-        }`}
-      >
-        {white}
-      </button>
-      {black !== undefined && (
-        <button
-          type="button"
-          onClick={() => onJump(number * 2)}
-          title={blackBook ? 'from the opening book' : undefined}
-          className={`flex-1 basis-0 min-w-0 text-left px-1 rounded ${
-            activeSide === 'black'
-              ? 'bg-neutral-100 text-neutral-900'
-              : `hover:bg-neutral-800 ${blackBook ? bookClass : 'text-neutral-300'}`
-          }`}
-        >
-          {black}
-        </button>
-      )}
+    <li
+      data-active={activeSide !== null}
+      className="grid grid-cols-[28px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-1"
+    >
+      <span className="pr-1 text-right text-faint">{number}.</span>
+      {cell(number * 2 - 1, white, 'text-fg')}
+      {black !== undefined && cell(number * 2, black, 'text-muted')}
     </li>
   )
 })
@@ -222,32 +239,31 @@ const MoveList = memo(function MoveList({
       ?.scrollIntoView({ block: 'nearest' })
   }, [activePly, moves.length])
 
+  if (moves.length === 0) {
+    return <p className="p-3 text-sm text-faint">No moves yet</p>
+  }
   return (
     <ol
       ref={listRef}
-      className="flex-1 min-h-0 overflow-y-auto text-sm font-mono p-2 space-y-0.5"
+      className="num grid h-full grid-cols-1 content-start gap-x-3 gap-y-0.5 overflow-y-auto px-2.5 py-2 text-sm sm:grid-cols-2"
     >
-      {moves.length === 0 ? (
-        <li className="text-neutral-600 italic">no moves yet</li>
-      ) : (
-        Array.from({ length: Math.ceil(moves.length / 2) }, (_, i) => (
-          <MoveRow
-            key={i}
-            number={i + 1}
-            white={moves[i * 2]}
-            black={moves[i * 2 + 1]}
-            bookPlies={bookPlies}
-            activeSide={
-              activePly === i * 2 + 1
-                ? 'white'
-                : activePly === i * 2 + 2
-                  ? 'black'
-                  : null
-            }
-            onJump={onJump}
-          />
-        ))
-      )}
+      {Array.from({ length: Math.ceil(moves.length / 2) }, (_, i) => (
+        <MoveRow
+          key={i}
+          number={i + 1}
+          white={moves[i * 2]}
+          black={moves[i * 2 + 1]}
+          bookPlies={bookPlies}
+          activeSide={
+            activePly === i * 2 + 1
+              ? 'white'
+              : activePly === i * 2 + 2
+                ? 'black'
+                : null
+          }
+          onJump={onJump}
+        />
+      ))}
     </ol>
   )
 })
@@ -284,13 +300,13 @@ function MoveNav({
   const atStart = activePly <= 0
   const atEnd = activePly >= plies
   const steps = [
-    { to: 0, title: 'game start (↑)', off: atStart, icon: <Chevron dir="left" double /> },
-    { to: activePly - 1, title: 'previous move (←)', off: atStart, icon: <Chevron dir="left" /> },
-    { to: activePly + 1, title: 'next move (→)', off: atEnd, icon: <Chevron dir="right" /> },
-    { to: plies, title: 'game end (↓)', off: atEnd, icon: <Chevron dir="right" double /> },
+    { to: 0, title: 'Game start (↑)', off: atStart, icon: <Chevron dir="left" double /> },
+    { to: activePly - 1, title: 'Previous move (←)', off: atStart, icon: <Chevron dir="left" /> },
+    { to: activePly + 1, title: 'Next move (→)', off: atEnd, icon: <Chevron dir="right" /> },
+    { to: plies, title: 'Game end (↓)', off: atEnd, icon: <Chevron dir="right" double /> },
   ]
   return (
-    <div className="flex border-t border-neutral-800">
+    <div className="flex border-t border-line text-muted">
       {steps.map((s) => (
         <button
           key={s.title}
@@ -299,7 +315,7 @@ function MoveNav({
           aria-label={s.title}
           disabled={s.off}
           onClick={() => onJump(s.to)}
-          className="flex-1 flex items-center justify-center py-1.5 text-neutral-300 transition-colors hover:bg-neutral-800 disabled:opacity-25 disabled:hover:bg-transparent"
+          className="flex flex-1 items-center justify-center py-2.5 transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-30 disabled:hover:bg-transparent"
         >
           {s.icon}
         </button>
@@ -308,84 +324,33 @@ function MoveNav({
   )
 }
 
-/** Result and reason, or a cancel control while playing. */
-function GameStatusPanel({
-  gameId,
-  status,
-  result,
-  reason,
-}: {
-  gameId: string
-  status: GameStatus | null
-  result: string | null
-  reason: string | null
-}) {
-  const { user } = useAuth()
-  const [armed, setArmed] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!armed) return
-    const t = setTimeout(() => setArmed(false), 4000)
-    return () => clearTimeout(t)
-  }, [armed])
-
-  const doCancel = async () => {
-    setBusy(true)
-    setError(null)
-    try {
-      await cancelGame(gameId)
-      // The SSE stream delivers the aborted game_end.
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(false)
-      setArmed(false)
-    }
-  }
-
-  if (status === 'playing') {
-    return (
-      <div className="flex flex-col items-center gap-1 text-sm">
-        <span className="text-neutral-500 italic">playing</span>
-        {user && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => (armed ? void doCancel() : setArmed(true))}
-            className={`text-xs px-2 py-0.5 rounded border transition-colors disabled:opacity-40 ${
-              armed
-                ? 'border-red-700 text-red-400 hover:bg-red-950'
-                : 'border-neutral-700 text-neutral-400 hover:bg-neutral-800'
-            }`}
-          >
-            {busy ? 'cancelling…' : armed ? 'really cancel?' : 'cancel game'}
-          </button>
-        )}
-        {error && <span className="text-red-400 text-xs">{error}</span>}
-      </div>
-    )
-  }
-
-  if (status === null) return null
-
+function FlipIcon() {
   return (
-    <div className="flex flex-col items-center gap-0.5 text-sm">
-      {status === 'aborted' ? (
-        <span className="text-amber-500/90 font-medium">aborted</span>
-      ) : (
-        <span className="text-neutral-100 font-medium">{result ?? '*'}</span>
-      )}
-      {reason && <span className="text-neutral-500 text-xs">{reason}</span>}
-    </div>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M17 2l4 4-4 4" />
+      <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+      <path d="M7 22l-4-4 4-4" />
+      <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+    </svg>
   )
 }
 
-export default function GamePage() {
-  const { id } = useParams<{ id: string }>()
+const Dot = () => <span className="text-faint">·</span>
+
+function GameView({ id }: { id: string }) {
+  const { user } = useAuth()
   const {
     loadError,
+    detail,
     connStatus,
     whiteName,
     blackName,
@@ -404,6 +369,7 @@ export default function GamePage() {
     reason,
     status: gameStatus,
     clocks,
+    endedAt,
   } = useGame(id)
   const [orientation, setOrientation] = useState<'white' | 'black'>('white')
   const [viewPly, setViewPly] = useState<number | null>(null)
@@ -501,6 +467,14 @@ export default function GamePage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [moves.length, jumpTo, step])
 
+  if (loadError) {
+    return isNotFound(loadError) ? (
+      <NotFound />
+    ) : (
+      <LoadError what="this game" error={loadError} />
+    )
+  }
+
   // The running search if it's this side's turn live, else its last move's.
   const stored = evalsAt(evals, effectiveViewPly)
   const liveIsCurrent =
@@ -531,7 +505,8 @@ export default function GamePage() {
     color: 'white',
     name: whiteName,
     version: whiteVersion,
-    rating: whiteRating,
+    change: whiteRating,
+    current: detail?.white_current ?? null,
     pieces: byWhite,
     clock: clocks?.white ?? null,
     since: clocks?.updatedAt ?? 0,
@@ -541,207 +516,210 @@ export default function GamePage() {
     color: 'black',
     name: blackName,
     version: blackVersion,
-    rating: blackRating,
+    change: blackRating,
+    current: detail?.black_current ?? null,
     pieces: byBlack,
     clock: clocks?.black ?? null,
     since: clocks?.updatedAt ?? 0,
     active: isClockTicking && sideToMove === 'black',
   } as const
-  const topIsBlack = orientation === 'white'
-  const top = topIsBlack ? blackBar : whiteBar
-  const bottom = topIsBlack ? whiteBar : blackBar
+  const top = orientation === 'white' ? blackBar : whiteBar
+  const bottom = orientation === 'white' ? whiteBar : blackBar
 
-  if (loadError) {
-    return (
-      <div className="max-w-5xl mx-auto px-4 py-10 text-center flex flex-col gap-3">
-        <p className="text-red-400">{loadError}</p>
-        <Link to="/" className="text-neutral-400 hover:text-neutral-100 text-sm">
-          ← back to home
-        </Link>
-      </div>
-    )
-  }
+  const evalTitle = (side: string, name: string | null, info: SearchInfo | null) =>
+    `${side} engine${name ? ` (${name})` : ''}: ${formatEval(toWhite(info, side === 'White' ? 'white' : 'black'))}${
+      info?.depth ? ` at depth ${info.depth}` : ''
+    }`
 
-  const showFollowToggle = gameStatus === 'playing'
+  const tournamentId = detail?.tournament_id ?? null
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col items-center gap-4 sm:gap-6">
-      <div className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[auto_auto_auto] sm:gap-x-3">
-        <div className="sm:col-start-2 sm:row-start-1">
-          <PlayerBar {...top} />
-        </div>
-        {/* `contents` hands both children to the grid once it takes over. */}
-        <div className="flex gap-2 sm:contents">
-          <div className="flex gap-1 sm:col-start-1 sm:row-start-2">
-            <EvalBar
-              side="white"
-              title={`white engine${whiteName ? ` (${whiteName})` : ''}: ${formatEval(whiteEval)}${
-                whiteSearch.info?.depth
-                  ? ` at depth ${whiteSearch.info.depth}`
-                  : ''
-              }`}
-              value={whiteEval}
-              flipped={orientation === 'black'}
-            />
-            <EvalBar
-              side="black"
-              title={`black engine${blackName ? ` (${blackName})` : ''}: ${formatEval(blackEval)}${
-                blackSearch.info?.depth
-                  ? ` at depth ${blackSearch.info.depth}`
-                  : ''
-              }`}
-              value={blackEval}
-              flipped={orientation === 'black'}
-            />
-          </div>
-          <div ref={boardRef} className="relative sm:col-start-2 sm:row-start-2">
-            <Chessground config={cgConfig} />
-            <button
-              type="button"
-              onClick={() =>
-                setOrientation((o) => (o === 'white' ? 'black' : 'white'))
-              }
-              aria-label="flip board"
-              title="flip board"
-              className="absolute -top-2 -right-2 bg-neutral-900 border border-neutral-700 text-neutral-200 hover:bg-neutral-800 rounded-full p-1.5 leading-none shadow"
+    <Page>
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-meta text-muted">
+        {gameStatus === 'playing' && (
+          <>
+            <LiveDot />
+            <span className="text-accent">
+              {connStatus === 'error' ? 'Reconnecting…' : 'Live'}
+            </span>
+            <Dot />
+          </>
+        )}
+        {gameStatus === 'ended' && (
+          <>
+            <span className="num font-medium text-fg">{formatResult(result)}</span>
+            {reason && <span>{capitalize(reason)}</span>}
+            <Dot />
+          </>
+        )}
+        {gameStatus === 'aborted' && (
+          <>
+            <span className="text-loss">Aborted{reason ? ` · ${reason}` : ''}</span>
+            <Dot />
+          </>
+        )}
+        {tournamentId && detail?.tournament_name ? (
+          <>
+            <Link
+              to={tournamentUrl(tournamentId)}
+              className="text-fg transition-colors hover:text-muted"
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              {detail.tournament_name}
+            </Link>
+            {detail.tournament_seq != null && (
+              <span>Game {detail.tournament_seq + 1}</span>
+            )}
+          </>
+        ) : (
+          detail && <span>Casual</span>
+        )}
+        {tc && (
+          <>
+            <Dot />
+            <span>{detail?.rated ? `rated ${ratingCategory(tc)}` : 'unrated'}</span>
+            <Dot />
+            <span className="num">{formatTc(tc)}</span>
+          </>
+        )}
+        {runnerId && (
+          <>
+            <Dot />
+            <Link to={runnerUrl(runnerId)} className="transition-colors hover:text-fg">
+              runner {detail?.runner_name ?? ''}
+            </Link>
+          </>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[auto_minmax(0,1fr)] lg:items-start">
+        <div className="flex flex-col gap-2.5">
+          <PlayerBar {...top} />
+          <div className="flex gap-3">
+            <div className="flex gap-1">
+              <EvalBar
+                side="white"
+                title={evalTitle('White', whiteName, whiteSearch.info)}
+                value={whiteEval}
+                flipped={orientation === 'black'}
+              />
+              <EvalBar
+                side="black"
+                title={evalTitle('Black', blackName, blackSearch.info)}
+                value={blackEval}
+                flipped={orientation === 'black'}
+              />
+            </div>
+            <div ref={boardRef} className="relative">
+              <Chessground config={cgConfig} />
+              <button
+                type="button"
+                onClick={() =>
+                  setOrientation((o) => (o === 'white' ? 'black' : 'white'))
+                }
+                aria-label="Flip board"
+                title="Flip board"
+                className="absolute -right-2.5 -top-2.5 z-10 flex h-[30px] w-[30px] items-center justify-center rounded-full border border-line-strong bg-surface text-fg transition-colors hover:bg-surface-2"
               >
-                <path d="M17 2l4 4-4 4" />
-                <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
-                <path d="M7 22l-4-4 4-4" />
-                <path d="M21 13v1a4 4 0 0 1-4 4H3" />
-              </svg>
-            </button>
+                <FlipIcon />
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="sm:col-start-2 sm:row-start-3">
           <PlayerBar {...bottom} />
         </div>
-        {/* Not `w-full`: the unwrapped debug transcript would widen the page. */}
-        <div className="flex flex-col w-[calc(var(--board-size)+var(--eval-bars))] h-64 sm:w-72 sm:h-[var(--board-size)] sm:col-start-3 sm:row-start-2 bg-neutral-900 border border-neutral-800 rounded overflow-hidden">
-          <div className="flex border-b border-neutral-800 text-xs">
-            {TABS.map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTab(t)}
-                className={`flex-1 py-1.5 border-b-2 -mb-px transition-colors ${
-                  tab === t
-                    ? 'border-neutral-300 text-neutral-100'
-                    : 'border-transparent text-neutral-500 hover:text-neutral-300'
-                }`}
-              >
-                {t}
-              </button>
-            ))}
+
+        <div className="flex min-w-0 flex-col gap-4 lg:pt-10">
+          <div className={`${panel} flex flex-col overflow-hidden`}>
+            <EngineSearch
+              side="white"
+              name={whiteName}
+              thinking={liveIsCurrent && liveSearch.side === 'white'}
+              {...whiteSearch}
+            />
+            <EngineSearch
+              side="black"
+              name={blackName}
+              thinking={liveIsCurrent && liveSearch.side === 'black'}
+              {...blackSearch}
+            />
+            <Tabs tabs={TABS} value={tab} onChange={setTab} />
+            <div className="flex h-60 flex-col">
+              {tab === 'moves' && (
+                <MoveList
+                  moves={moves}
+                  bookPlies={bookPlies}
+                  activePly={effectiveViewPly}
+                  onJump={jumpTo}
+                />
+              )}
+              {tab === 'graph' && (
+                <EvalGraph
+                  evals={evals}
+                  activePly={effectiveViewPly}
+                  onJump={jumpTo}
+                />
+              )}
+              {tab === 'log' && (
+                <GameDebug lines={uciLines} live={gameStatus === 'playing'} />
+              )}
+            </div>
+            <MoveNav
+              activePly={effectiveViewPly}
+              plies={moves.length}
+              onJump={jumpTo}
+            />
+            {gameStatus === 'playing' && (
+              <div className="px-2 pb-2">
+                <button
+                  type="button"
+                  onClick={() => jumpTo(moves.length)}
+                  disabled={following}
+                  className={`flex h-[30px] w-full items-center justify-center gap-2 rounded border text-meta transition-colors ${
+                    following
+                      ? 'cursor-default border-accent/45 text-accent'
+                      : 'border-line-strong text-muted hover:bg-surface-2 hover:text-fg'
+                  }`}
+                >
+                  {following && <LiveDot />}
+                  {following ? 'Following live' : 'Back to live'}
+                </button>
+              </div>
+            )}
           </div>
-          {tab === 'moves' && (
-            <MoveList
-              moves={moves}
-              bookPlies={bookPlies}
-              activePly={effectiveViewPly}
-              onJump={jumpTo}
-            />
-          )}
-          {tab === 'lines' && (
-            <GameLines
-              white={{
-                name: whiteName,
-                thinking: liveIsCurrent && liveSearch.side === 'white',
-                ...whiteSearch,
-              }}
-              black={{
-                name: blackName,
-                thinking: liveIsCurrent && liveSearch.side === 'black',
-                ...blackSearch,
-              }}
-              evals={evals}
-              activePly={effectiveViewPly}
-              onJump={jumpTo}
-            />
-          )}
-          {tab === 'debug' && (
-            <GameDebug lines={uciLines} live={gameStatus === 'playing'} />
-          )}
-          <MoveNav
-            activePly={effectiveViewPly}
-            plies={moves.length}
-            onJump={jumpTo}
-          />
-          {showFollowToggle && (
-            <button
-              type="button"
-              onClick={() => jumpTo(moves.length)}
-              disabled={following}
-              title={
-                following
-                  ? 'following live moves'
-                  : 'click to follow the live game'
-              }
-              className={`mx-1 mb-1 px-2 py-1 text-xs rounded border flex items-center justify-center gap-1.5 transition-colors ${
-                following
-                  ? 'border-green-700 text-green-400 cursor-default'
-                  : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800 cursor-pointer'
-              }`}
-            >
-              <span
-                className={`inline-block w-1.5 h-1.5 rounded-full ${
-                  following ? 'bg-green-500 animate-pulse' : 'bg-neutral-500'
-                }`}
-              />
-              {following ? 'following' : 'not following'}
-            </button>
-          )}
-        </div>
-        <div className="text-center sm:col-start-3 sm:row-start-3">
-          {id && (
-            <GameStatusPanel
-              gameId={id}
-              status={gameStatus}
-              result={result}
-              reason={reason}
-            />
-          )}
+          <div className="flex items-center gap-3 text-meta text-muted">
+            <span>
+              Move {moveNumber(effectiveViewPly)}
+              {effectiveViewPly < moves.length && ` / ${moveNumber(moves.length)}`}
+              {gameStatus === 'playing' && following && ` · ${sideToMove} to move`}
+            </span>
+            {gameStatus === 'playing' && user && (
+              <span className="ml-auto">
+                <ConfirmButton
+                  label="Cancel game"
+                  confirmLabel="Really cancel?"
+                  busyLabel="Cancelling…"
+                  // The SSE stream delivers the aborted game_end.
+                  onConfirm={() => cancelGame(id)}
+                />
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="text-xs text-neutral-500 flex items-center gap-4">
-        {gameStatus === 'playing' && (
-          <span
-            aria-label={connStatus}
-            title={connStatus}
-            className={`inline-block w-2 h-2 rounded-full ${
-              connStatus === 'connected'
-                ? 'bg-green-500'
-                : connStatus === 'connecting'
-                  ? 'bg-amber-400'
-                  : 'bg-red-500'
-            }`}
-          />
-        )}
-        <span>
-          move {Math.max(1, Math.ceil(effectiveViewPly / 2))}
-          {effectiveViewPly < moves.length ? ` / ${Math.ceil(moves.length / 2)}` : ''}
-        </span>
-        {tc && <span className="font-mono">{tc}</span>}
-        {runnerId && (
-          <Link
-            to={runnerUrl(runnerId)}
-            className="hover:text-neutral-300 transition-colors"
-          >
-            runner
-          </Link>
-        )}
-      </div>
-    </div>
+      {tournamentId && (
+        <MoreFromTournament
+          tournamentId={tournamentId}
+          gameId={id}
+          plies={moves.length}
+          endedAt={endedAt}
+        />
+      )}
+    </Page>
   )
+}
+
+/** Keyed on the id, so moving to another game starts from a clean slate. */
+export default function GamePage() {
+  const { id = '' } = useParams()
+  return <GameView key={id} id={id} />
 }

@@ -87,6 +87,42 @@ export type EngineDetailOut = {
      */
     created_at: string;
     /**
+     * Version Count
+     */
+    version_count?: number;
+    /**
+     * Ratings
+     */
+    ratings?: {
+        [key in RatingCategory]?: Rating;
+    };
+    /**
+     * Week Delta
+     */
+    week_delta?: {
+        [key in RatingCategory]?: number;
+    };
+    /**
+     * Games Played
+     */
+    games_played?: number;
+    /**
+     * Wins
+     */
+    wins?: number;
+    /**
+     * Draws
+     */
+    draws?: number;
+    /**
+     * Losses
+     */
+    losses?: number;
+    /**
+     * Last Game At
+     */
+    last_game_at?: string | null;
+    /**
      * Versions
      */
     versions: Array<EngineVersionOut>;
@@ -143,6 +179,10 @@ export type EngineOut = {
      */
     owner_login: string;
     /**
+     * Created At
+     */
+    created_at: string;
+    /**
      * Version Count
      */
     version_count?: number;
@@ -152,6 +192,32 @@ export type EngineOut = {
     ratings?: {
         [key in RatingCategory]?: Rating;
     };
+    /**
+     * Week Delta
+     */
+    week_delta?: {
+        [key in RatingCategory]?: number;
+    };
+    /**
+     * Games Played
+     */
+    games_played?: number;
+    /**
+     * Wins
+     */
+    wins?: number;
+    /**
+     * Draws
+     */
+    draws?: number;
+    /**
+     * Losses
+     */
+    losses?: number;
+    /**
+     * Last Game At
+     */
+    last_game_at?: string | null;
 };
 
 /**
@@ -405,6 +471,14 @@ export type GameDetailOut = {
      */
     tournament_id?: string | null;
     /**
+     * Tournament Name
+     */
+    tournament_name?: string | null;
+    /**
+     * Tournament Seq
+     */
+    tournament_seq?: number | null;
+    /**
      * Rated
      */
     rated?: boolean;
@@ -418,6 +492,7 @@ export type GameDetailOut = {
      * Book Plies
      */
     book_plies?: number;
+    score?: Score | null;
     /**
      * Created At
      */
@@ -434,6 +509,12 @@ export type GameDetailOut = {
      * Uci Tail
      */
     uci_tail?: Array<UciLine>;
+    /**
+     * Runner Name
+     */
+    runner_name?: string | null;
+    white_current?: Rating | null;
+    black_current?: Rating | null;
 };
 
 /**
@@ -541,6 +622,14 @@ export type GameOut = {
      */
     tournament_id?: string | null;
     /**
+     * Tournament Name
+     */
+    tournament_name?: string | null;
+    /**
+     * Tournament Seq
+     */
+    tournament_seq?: number | null;
+    /**
      * Rated
      */
     rated?: boolean;
@@ -554,6 +643,7 @@ export type GameOut = {
      * Book Plies
      */
     book_plies?: number;
+    score?: Score | null;
     /**
      * Created At
      */
@@ -599,6 +689,20 @@ export type HttpValidationError = {
      * Detail
      */
     detail?: Array<ValidationError>;
+};
+
+/**
+ * HandleCheckOut
+ */
+export type HandleCheckOut = {
+    /**
+     * Available
+     */
+    available: boolean;
+    /**
+     * Reason
+     */
+    reason?: string | null;
 };
 
 /**
@@ -802,6 +906,58 @@ export type RegistryTokenOut = {
 };
 
 /**
+ * RunnerDetailOut
+ */
+export type RunnerDetailOut = {
+    /**
+     * Runner Id
+     */
+    runner_id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Owner Login
+     */
+    owner_login: string;
+    /**
+     * Online
+     */
+    online: boolean;
+    /**
+     * Max Games
+     */
+    max_games: number;
+    /**
+     * Active Games
+     */
+    active_games?: number;
+    /**
+     * Last Seen At
+     */
+    last_seen_at?: string | null;
+    hardware?: HardwareInfo | null;
+    telemetry?: Telemetry | null;
+    /**
+     * Games Played
+     */
+    games_played?: number;
+    /**
+     * Playing
+     */
+    playing: Array<GameOut>;
+    /**
+     * Recent
+     */
+    recent: Array<GameOut>;
+};
+
+/**
  * RunnerLiveEvent
  *
  * One runner's live status, pushed over the /stream/runners SSE feed on
@@ -861,6 +1017,10 @@ export type RunnerOut = {
     last_seen_at?: string | null;
     hardware?: HardwareInfo | null;
     telemetry?: Telemetry | null;
+    /**
+     * Games Played
+     */
+    games_played?: number;
 };
 
 /**
@@ -875,6 +1035,22 @@ export type RunnerUpdateRequest = {
      * Description
      */
     description?: string | null;
+};
+
+/**
+ * Score
+ *
+ * An eval in White's frame: exactly one of `cp` and `mate` is set.
+ */
+export type Score = {
+    /**
+     * Cp
+     */
+    cp?: number | null;
+    /**
+     * Mate
+     */
+    mate?: number | null;
 };
 
 /**
@@ -1277,6 +1453,11 @@ export type TournamentOut = {
      * Rated
      */
     rated: boolean;
+    rating_category: RatingCategory;
+    /**
+     * Tc
+     */
+    tc: string;
     /**
      * Runner Id
      */
@@ -1467,6 +1648,14 @@ export type UserProfileOut = {
      * Games
      */
     games: Array<GameOut>;
+    /**
+     * Runners
+     */
+    runners: Array<RunnerOut>;
+    /**
+     * Tournament Count
+     */
+    tournament_count: number;
 };
 
 /**
@@ -1558,6 +1747,36 @@ export type PendingSignupResponses = {
 };
 
 export type PendingSignupResponse = PendingSignupResponses[keyof PendingSignupResponses];
+
+export type CheckHandleData = {
+    body?: never;
+    path: {
+        /**
+         * Login
+         */
+        login: string;
+    };
+    query?: never;
+    url: '/auth/handle/{login}';
+};
+
+export type CheckHandleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CheckHandleError = CheckHandleErrors[keyof CheckHandleErrors];
+
+export type CheckHandleResponses = {
+    /**
+     * Successful Response
+     */
+    200: HandleCheckOut;
+};
+
+export type CheckHandleResponse = CheckHandleResponses[keyof CheckHandleResponses];
 
 export type RegisterData = {
     body: RegisterRequest;
@@ -2147,7 +2366,7 @@ export type GetRunnerResponses = {
     /**
      * Successful Response
      */
-    200: RunnerOut;
+    200: RunnerDetailOut;
 };
 
 export type GetRunnerResponse = GetRunnerResponses[keyof GetRunnerResponses];

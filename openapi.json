@@ -96,6 +96,49 @@
         }
       }
     },
+    "/auth/handle/{login}": {
+      "get": {
+        "tags": [
+          "Auth & account"
+        ],
+        "summary": "Check Handle",
+        "description": "Whether a handle is free to register, for the /register page.",
+        "operationId": "check_handle",
+        "parameters": [
+          {
+            "name": "login",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Login"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandleCheckOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/register": {
       "post": {
         "tags": [
@@ -946,7 +989,7 @@
           "Runners"
         ],
         "summary": "Get Runner",
-        "description": "One runner's durable metadata joined with its live online status.",
+        "description": "One runner's durable metadata, live status, and its playing and\nrecently finished games.",
         "operationId": "get_runner",
         "parameters": [
           {
@@ -966,7 +1009,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunnerOut"
+                  "$ref": "#/components/schemas/RunnerDetailOut"
                 }
               }
             }
@@ -1629,6 +1672,65 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "version_count": {
+            "type": "integer",
+            "title": "Version Count",
+            "default": 0
+          },
+          "ratings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Rating"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/RatingCategory"
+            },
+            "type": "object",
+            "title": "Ratings",
+            "default": {}
+          },
+          "week_delta": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/RatingCategory"
+            },
+            "type": "object",
+            "title": "Week Delta",
+            "default": {}
+          },
+          "games_played": {
+            "type": "integer",
+            "title": "Games Played",
+            "default": 0
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins",
+            "default": 0
+          },
+          "draws": {
+            "type": "integer",
+            "title": "Draws",
+            "default": 0
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses",
+            "default": 0
+          },
+          "last_game_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Game At"
+          },
           "versions": {
             "items": {
               "$ref": "#/components/schemas/EngineVersionOut"
@@ -1716,6 +1818,11 @@
             "type": "string",
             "title": "Owner Login"
           },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
           "version_count": {
             "type": "integer",
             "title": "Version Count",
@@ -1731,6 +1838,49 @@
             "type": "object",
             "title": "Ratings",
             "default": {}
+          },
+          "week_delta": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/RatingCategory"
+            },
+            "type": "object",
+            "title": "Week Delta",
+            "default": {}
+          },
+          "games_played": {
+            "type": "integer",
+            "title": "Games Played",
+            "default": 0
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins",
+            "default": 0
+          },
+          "draws": {
+            "type": "integer",
+            "title": "Draws",
+            "default": 0
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses",
+            "default": 0
+          },
+          "last_game_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Game At"
           }
         },
         "type": "object",
@@ -1739,7 +1889,8 @@
           "name",
           "description",
           "tags",
-          "owner_login"
+          "owner_login",
+          "created_at"
         ],
         "title": "EngineOut"
       },
@@ -2179,6 +2330,28 @@
             ],
             "title": "Tournament Id"
           },
+          "tournament_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tournament Name"
+          },
+          "tournament_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tournament Seq"
+          },
           "rated": {
             "type": "boolean",
             "title": "Rated",
@@ -2220,6 +2393,16 @@
             "title": "Book Plies",
             "default": 0
           },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Score"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -2259,6 +2442,37 @@
             "type": "array",
             "title": "Uci Tail",
             "default": []
+          },
+          "runner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runner Name"
+          },
+          "white_current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rating"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "black_current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rating"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -2482,6 +2696,28 @@
             ],
             "title": "Tournament Id"
           },
+          "tournament_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tournament Name"
+          },
+          "tournament_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tournament Seq"
+          },
           "rated": {
             "type": "boolean",
             "title": "Rated",
@@ -2522,6 +2758,16 @@
             "type": "integer",
             "title": "Book Plies",
             "default": 0
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Score"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "created_at": {
             "type": "string",
@@ -2635,6 +2881,30 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HandleCheckOut": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available"
+        ],
+        "title": "HandleCheckOut"
       },
       "HardwareInfo": {
         "properties": {
@@ -2920,6 +3190,103 @@
         "title": "RegistryTokenOut",
         "description": "Docker Registry v2 token response (`GET /registry/token`)."
       },
+      "RunnerDetailOut": {
+        "properties": {
+          "runner_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Runner Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "owner_login": {
+            "type": "string",
+            "title": "Owner Login"
+          },
+          "online": {
+            "type": "boolean",
+            "title": "Online"
+          },
+          "max_games": {
+            "type": "integer",
+            "title": "Max Games"
+          },
+          "active_games": {
+            "type": "integer",
+            "title": "Active Games",
+            "default": 0
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "hardware": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HardwareInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "telemetry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Telemetry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "games_played": {
+            "type": "integer",
+            "title": "Games Played",
+            "default": 0
+          },
+          "playing": {
+            "items": {
+              "$ref": "#/components/schemas/GameOut"
+            },
+            "type": "array",
+            "title": "Playing"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/GameOut"
+            },
+            "type": "array",
+            "title": "Recent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "runner_id",
+          "name",
+          "description",
+          "owner_login",
+          "online",
+          "max_games",
+          "playing",
+          "recent"
+        ],
+        "title": "RunnerDetailOut"
+      },
       "RunnerLiveEvent": {
         "properties": {
           "runner_id": {
@@ -3018,6 +3385,11 @@
                 "type": "null"
               }
             ]
+          },
+          "games_played": {
+            "type": "integer",
+            "title": "Games Played",
+            "default": 0
           }
         },
         "type": "object",
@@ -3058,6 +3430,35 @@
         },
         "type": "object",
         "title": "RunnerUpdateRequest"
+      },
+      "Score": {
+        "properties": {
+          "cp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cp"
+          },
+          "mate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mate"
+          }
+        },
+        "type": "object",
+        "title": "Score",
+        "description": "An eval in White's frame: exactly one of `cp` and `mate` is set."
       },
       "SearchInfo": {
         "properties": {
@@ -3761,6 +4162,13 @@
             "type": "boolean",
             "title": "Rated"
           },
+          "rating_category": {
+            "$ref": "#/components/schemas/RatingCategory"
+          },
+          "tc": {
+            "type": "string",
+            "title": "Tc"
+          },
           "runner_id": {
             "type": "string",
             "format": "uuid",
@@ -3807,6 +4215,8 @@
           "format",
           "status",
           "rated",
+          "rating_category",
+          "tc",
           "runner_id",
           "created_by",
           "participant_count",
@@ -4037,6 +4447,17 @@
             },
             "type": "array",
             "title": "Games"
+          },
+          "runners": {
+            "items": {
+              "$ref": "#/components/schemas/RunnerOut"
+            },
+            "type": "array",
+            "title": "Runners"
+          },
+          "tournament_count": {
+            "type": "integer",
+            "title": "Tournament Count"
           }
         },
         "type": "object",
@@ -4046,7 +4467,9 @@
           "avatar_url",
           "created_at",
           "engines",
-          "games"
+          "games",
+          "runners",
+          "tournament_count"
         ],
         "title": "UserProfileOut",
         "description": "Public profile: the user plus their engines and those engines' games."

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   fetchGame,
   gameStreamUrl,
+  type GameDetail,
   type GameStatus,
   type RatingChange,
   type SearchInfo,
@@ -37,7 +38,9 @@ export type ConnStatus = 'connecting' | 'connected' | 'error' | 'disconnected'
 
 /** One game's live state: the initial fetch, then SSE updates while playing. */
 export function useGame(id: string | undefined) {
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<unknown>(null)
+  // The fetch as it came: fields the stream never changes.
+  const [detail, setDetail] = useState<GameDetail | null>(null)
   const [connStatus, setConnStatus] = useState<ConnStatus>('connecting')
   const [whiteName, setWhiteName] = useState<string | null>(null)
   const [blackName, setBlackName] = useState<string | null>(null)
@@ -60,6 +63,8 @@ export function useGame(id: string | undefined) {
   const [reason, setReason] = useState<string | null>(null)
   const [status, setStatus] = useState<GameStatus | null>(null)
   const [clocks, setClocks] = useState<Clocks | null>(null)
+  // When the stream reported the end: the page watched it happen.
+  const [endedAt, setEndedAt] = useState<number | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -67,6 +72,7 @@ export function useGame(id: string | undefined) {
     fetchGame(id)
       .then((g) => {
         if (cancelled) return
+        setDetail(g)
         setWhiteName(g.white_name)
         setBlackName(g.black_name)
         setWhiteVersion(g.white_version)
@@ -89,7 +95,7 @@ export function useGame(id: string | undefined) {
         })
       })
       .catch((e: unknown) => {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e))
+        if (!cancelled) setLoadError(e)
       })
     return () => {
       cancelled = true
@@ -149,6 +155,7 @@ export function useGame(id: string | undefined) {
         setResult(event.result)
         setReason(event.reason ?? null)
         setStatus(event.status ?? 'ended')
+        setEndedAt(Date.now())
         es.close()
         setConnStatus('disconnected')
       }
@@ -158,6 +165,7 @@ export function useGame(id: string | undefined) {
 
   return {
     loadError,
+    detail,
     connStatus,
     whiteName,
     blackName,
@@ -176,5 +184,6 @@ export function useGame(id: string | undefined) {
     reason,
     status,
     clocks,
+    endedAt,
   }
 }

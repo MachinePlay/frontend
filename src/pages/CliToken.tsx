@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { createCliToken } from '../api'
+import { Link } from 'react-router'
+import { createCliToken, profileUrl } from '../api'
 import { useAuth } from '../auth-context'
-import { FreshToken, Hint, PrimaryButton } from '../components'
+import { button, panel } from '../styles'
+import { ErrorText, FreshToken, Hint, Page, PageHeader } from '../ui'
 
 export default function CliToken() {
   const { user, loading, login } = useAuth()
@@ -15,39 +17,58 @@ export default function CliToken() {
     try {
       setToken(await createCliToken())
     } catch {
-      setError('could not create a token')
+      setError("Couldn't create a token")
     } finally {
       setBusy(false)
     }
   }
 
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-8 flex flex-col gap-5">
-      <h1 className="text-xl font-semibold text-neutral-100">CLI token</h1>
-      <p className="text-neutral-400 text-sm">
-        Generate a token, then paste it into the{' '}
-        <span className="font-mono">machineplay login</span> prompt in your
-        terminal.
-      </p>
+  const big = `${button.primary} h-[34px] px-4 self-start`
 
-      {loading ? (
-        <Hint>…</Hint>
-      ) : !user ? (
-        <PrimaryButton onClick={login} className="self-start">
-          sign in with GitHub
-        </PrimaryButton>
-      ) : token ? (
-        <FreshToken token={token} />
-      ) : (
-        <PrimaryButton
-          onClick={() => void generate()}
-          disabled={busy}
-          className="self-start"
-        >
-          {busy ? 'generating…' : 'generate token'}
-        </PrimaryButton>
+  return (
+    <Page className="!max-w-[560px] !gap-7 sm:!pt-20">
+      <PageHeader
+        title="CLI token"
+        subtitle={
+          <span className="text-md text-muted">
+            Generate a token, then paste it into the{' '}
+            <span className="font-mono text-fg">machineplay login</span> prompt in
+            your terminal.
+          </span>
+        }
+      />
+
+      <div className={`${panel} flex flex-col gap-4 p-5`}>
+        {loading ? (
+          <Hint>…</Hint>
+        ) : !user ? (
+          <button type="button" onClick={login} className={big}>
+            Sign in with GitHub
+          </button>
+        ) : token ? (
+          <FreshToken token={token} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => void generate()}
+            disabled={busy}
+            className={big}
+          >
+            {busy ? 'Generating…' : 'Generate token'}
+          </button>
+        )}
+        {error && <ErrorText>{error}</ErrorText>}
+      </div>
+
+      {user && (
+        <p className="text-meta text-faint">
+          Manage or revoke tokens on{' '}
+          <Link to={profileUrl(user.login)} className="text-fg hover:text-muted">
+            your profile
+          </Link>
+          .
+        </p>
       )}
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-    </div>
+    </Page>
   )
 }

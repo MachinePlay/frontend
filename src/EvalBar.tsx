@@ -1,4 +1,5 @@
-import { barFill, formatEvalShort, type Eval } from './eval'
+import { barFill, type Eval } from './eval'
+import { SideChip } from './ui'
 
 /** One engine's eval beside the board. Both bars read in White's frame, so the
     engines compare at a glance. */
@@ -13,42 +14,24 @@ export function EvalBar({
   value: Eval | null
   flipped: boolean
 }) {
-  const fill = barFill(value)
-  const whiteAhead = fill >= 0.5
-  // The readout sits at the winning end.
-  const atBoardBottom = whiteAhead !== flipped
-
   return (
     <div
-      className="flex flex-col items-center gap-1 h-[var(--board-size)]"
+      className="flex h-[var(--board-size)] flex-col items-center gap-1"
       title={title}
     >
-      <span
-        className={`w-6 text-center text-[10px] leading-4 rounded-sm font-medium ${
-          side === 'white'
-            ? 'bg-neutral-200 text-neutral-900'
-            : 'bg-neutral-950 text-neutral-300 border border-neutral-700'
-        }`}
-      >
-        {side === 'white' ? 'W' : 'B'}
-      </span>
+      <SideChip side={side} />
       <div
-        className={`relative flex-1 w-6 rounded-sm overflow-hidden bg-neutral-800 ${
-          value ? '' : 'opacity-30'
+        className={`relative w-3.5 flex-1 overflow-hidden rounded-sm bg-track ${
+          value ? '' : 'opacity-40'
         }`}
       >
         <div
-          className="absolute inset-x-0 bg-neutral-100 transition-[height] duration-300"
-          style={{ height: `${fill * 100}%`, [flipped ? 'top' : 'bottom']: 0 }}
+          className="absolute inset-x-0 bg-fg transition-[height] duration-300"
+          style={{
+            height: `${barFill(value) * 100}%`,
+            [flipped ? 'top' : 'bottom']: 0,
+          }}
         />
-        <span
-          className={`absolute inset-x-0 text-center text-[9px] leading-none font-mono tabular-nums ${
-            whiteAhead ? 'text-neutral-600' : 'text-neutral-300'
-          }`}
-          style={{ [atBoardBottom ? 'bottom' : 'top']: '3px' }}
-        >
-          {formatEvalShort(value)}
-        </span>
       </div>
     </div>
   )
