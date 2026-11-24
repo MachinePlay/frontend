@@ -46,10 +46,6 @@ function slugify(text: string): string {
     .replace(/\s+/g, '-')
 }
 
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
 export function renderMarkdown(source: string): { html: string; toc: TocEntry[] } {
   const headings: TocEntry[] = []
   const seen = new Map<string, number>()
@@ -71,10 +67,6 @@ export function renderMarkdown(source: string): { html: string; toc: TocEntry[] 
           const id = n ? `${base}-${n}` : base
           headings.push({ id, text: plain, depth })
           return `<h${depth} id="${id}"><a href="#${id}">${this.parser.parseInline(tokens)}</a></h${depth}>\n`
-        },
-        code({ text, lang }: Tokens.Code) {
-          if (lang === 'mermaid') return `<pre class="mermaid">${escapeHtml(text)}</pre>\n`
-          return false
         },
       },
     },

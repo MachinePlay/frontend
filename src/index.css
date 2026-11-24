@@ -101,11 +101,6 @@ body {
     padding: 0;
     background: transparent;
   }
-  & pre.mermaid {
-    background: transparent;
-    border: none;
-    text-align: center;
-  }
 
   /* Headings are anchors to themselves. */
   & :is(h1, h2, h3) {

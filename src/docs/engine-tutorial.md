@@ -10,24 +10,7 @@ tournaments, and a library of other engines to play against.
 
 What is left is the interesting part: the searcher, the thing that actually picks a move.
 
-```mermaid
-flowchart LR
-    GUI["machineplay.org<br/>(GUI)"]
-
-    subgraph engine ["Chess engine - here it is main.py"]
-        direction LR
-        UCI["UCI protocol<br/>how engines and GUIs talk<br/>(provided in template)"]
-        SEARCH["Searcher<br/>picks the move<br/>YOU WRITE THIS"]
-        LIB["python-chess<br/>board representation<br/>legal move generator<br/>(third party lib)"]
-        UCI <--> SEARCH
-        SEARCH <--> LIB
-    end
-
-    GUI <--> UCI
-
-    classDef yours fill:#2f6f4f,stroke:#8fd0ab,color:#fff
-    class SEARCH yours
-```
+<img src="figures/fig-architecture.svg" alt="machineplay.org talks UCI to your engine; inside it, the UCI loop from the template calls the searcher you write, which uses python-chess for the board and legal moves">
 
 > [!TODO]
 > Link a game played by the finished engine, so readers see where this ends up.

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo } from 'react'
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router'
 import { DOCS, renderMarkdown, type TocEntry } from '../docs'
 import '../docs/figures/game-tree.js'
@@ -33,7 +33,6 @@ export default function Docs() {
   const { slug } = useParams()
   const doc = DOCS.find((d) => d.slug === slug)
   const rendered = useMemo(() => (doc ? renderMarkdown(doc.source) : null), [doc])
-  const content = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const { hash } = useLocation()
 
@@ -43,15 +42,6 @@ export default function Docs() {
     if (hash) document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView()
     else window.scrollTo(0, 0)
   }, [rendered, hash])
-
-  useEffect(() => {
-    const nodes = content.current?.querySelectorAll<HTMLElement>('pre.mermaid')
-    if (!nodes?.length) return
-    void import('mermaid').then(({ default: mermaid }) => {
-      mermaid.initialize({ startOnLoad: false, theme: 'dark' })
-      void mermaid.run({ nodes: [...nodes] })
-    })
-  }, [rendered])
 
   if (!doc || !rendered) return <NotFound />
 
@@ -103,7 +93,6 @@ export default function Docs() {
           </div>
         )}
         <div
-          ref={content}
           onClick={onClick}
           className="docs-prose prose prose-invert prose-neutral max-w-none"
           dangerouslySetInnerHTML={{ __html: rendered.html }}

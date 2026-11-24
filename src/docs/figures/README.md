@@ -16,6 +16,9 @@ Figures for the engine tutorial (`../engine-tutorial.md`, served at `/docs/engin
   It imports the geometry and label helpers from `game-tree.js`, so the static
   and interactive versions cannot drift apart. Re-run it after changing any
   caption, value or dimension.
+- `architecture.mmd` → `fig-architecture.svg` — the intro diagram, rendered once with
+  mermaid (`theme: 'dark'`, `htmlLabels: false`) and checked in as a static SVG, so the
+  site does not bundle mermaid. Re-render it by hand if you change the source.
 - `fig-*.svg` — the generated stand-ins. Each shows its tree in the finished
   state plus every step's commentary, so the tutorial can be proofread with the
   figures in place. Do not hand-edit them.

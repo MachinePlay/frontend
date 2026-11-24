@@ -1,0 +1,16 @@
+flowchart LR
+    GUI["machineplay.org<br/>(GUI)"]
+
+    subgraph engine ["Chess engine - here it is main.py"]
+        direction LR
+        UCI["UCI protocol<br/>how engines and GUIs talk<br/>(provided in template)"]
+        SEARCH["Searcher<br/>picks the move<br/>YOU WRITE THIS"]
+        LIB["python-chess<br/>board representation<br/>legal move generator<br/>(third party lib)"]
+        UCI <--> SEARCH
+        SEARCH <--> LIB
+    end
+
+    GUI <--> UCI
+
+    classDef yours fill:#2f6f4f,stroke:#8fd0ab,color:#fff
+    class SEARCH yours

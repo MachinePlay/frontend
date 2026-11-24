@@ -21,7 +21,6 @@
     "marked": "^18.3.0",
     "marked-alert": "^2.1.2",
     "marked-highlight": "^2.2.4",
-    "mermaid": "^12.3.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router": "^7.15.0",
