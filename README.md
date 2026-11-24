@@ -15,10 +15,12 @@ reach for them rather than raw colours.
 | `accent` | **only things happening now**: live dot, Running, Following live, the watched game, "thinking" |
 | `win` `loss` | **only results and rating deltas** (`loss` doubles as danger); `win` also marks an online runner |
 
-- Type: IBM Plex Sans for UI, Plex Mono with tabular figures (the `num`
-  utility) for numbers, clocks, moves, ratings, versions and evals. Sizes:
-  `text-title` 28/34 page titles, `text-section` 18/24 section titles,
-  `text-md` 15, `text-sm` 14 body, `text-meta` 13, `text-xs` 12.
+- Type: IBM Plex Sans (variable; body at weight 450, since 400 looks
+  hairline light-on-dark) for UI, Plex Mono with tabular figures (the `num`
+  utility) for numbers, clocks, moves, ratings, versions and evals. Sizes,
+  half a step above the original handoff: `text-title` 29 page titles,
+  `text-section` 19 section titles, `text-md` 15.5, `text-sm` 14.5 body,
+  `text-meta` 13.5, `text-xs` 12.5.
 - Copy is sentence case. Usernames and engine names stay as entered.
 - Lists are hairline rows (`border-line-row`), not bordered cards. Panels are
   `rounded-lg` with a `line` border; controls `rounded` (4px). No shadows.
@@ -30,7 +32,8 @@ Primitives (buttons, inputs, segmented control, switch, tabs, pills, meters,
 the two-step `ConfirmButton` and typed-phrase `DangerZone`) live in
 `src/ui.tsx` with their class strings in `src/styles.ts`; game rows, live
 cards and status pills in `src/components.tsx`. Boards are chessground with
-the brown board and cburnett pieces.
+cburnett pieces on lichess brown dimmed for the dark page (`--board-light`
+`#e4ceac`, `--board-dark` `#ac845f`).
 
 ## License
 

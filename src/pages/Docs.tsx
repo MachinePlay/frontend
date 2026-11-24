@@ -99,7 +99,7 @@ export default function Docs() {
                 }
               >
                 {d.title}
-                {d.draft && <span className="text-[11px] text-accent">Draft</span>}
+                {d.draft && <span className="text-[11.5px] text-accent">Draft</span>}
               </NavLink>
               {d === doc && rendered.toc.length > 0 && (
                 <>

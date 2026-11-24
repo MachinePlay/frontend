@@ -183,7 +183,7 @@ export default function Home() {
     <Page>
       <section className="flex flex-col gap-5">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-          <h1 className="flex items-center gap-2.5 text-2xl/[30px] font-semibold">
+          <h1 className="flex items-center gap-2.5 text-title font-semibold">
             {allLive.length > 0 && <LiveDot />}
             Live now
           </h1>

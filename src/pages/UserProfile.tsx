@@ -203,7 +203,7 @@ function EngineRows({ engines }: { engines: Engine[] }) {
 function Count({ n, label }: { n: number; label: string }) {
   return (
     <div className="flex flex-col items-end">
-      <span className="num text-[22px] font-medium leading-7">{n}</span>
+      <span className="num text-[23px] font-medium leading-[30px]">{n}</span>
       <span className="text-xs text-faint">{label}</span>
     </div>
   )

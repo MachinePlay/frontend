@@ -19,16 +19,19 @@
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
-  --text-meta: 13px;
-  --text-meta--line-height: 18px;
-  --text-md: 15px;
-  --text-md--line-height: 22px;
-  --text-section: 18px;
-  --text-section--line-height: 24px;
-  --text-title: 28px;
-  --text-title--line-height: 34px;
-  --text-display: 30px;
-  --text-display--line-height: 36px;
+  /* Half a step above the handoff's scale, which read small on a dark page. */
+  --text-xs: 12.5px;
+  --text-xs--line-height: 17px;
+  --text-meta: 13.5px;
+  --text-meta--line-height: 19px;
+  --text-sm: 14.5px;
+  --text-sm--line-height: 21px;
+  --text-md: 15.5px;
+  --text-md--line-height: 23px;
+  --text-section: 19px;
+  --text-section--line-height: 25px;
+  --text-title: 29px;
+  --text-title--line-height: 35px;
 }
 
 /* Numbers, clocks, moves, ratings: mono with tabular figures. */
@@ -42,19 +45,33 @@ body {
   background: var(--color-bg);
   color: var(--color-fg);
   font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 14.5px;
+  line-height: 21px;
+  /* Plex Sans is variable; 400 looks hairline in light-on-dark text. */
+  font-weight: 450;
 }
 
 :root {
   color-scheme: dark;
   /* Two 14px eval bars, their gap, and the gap to the board. */
+  --board-light: #e4ceac;
+  --board-dark: #ac845f;
   --eval-bars: 44px;
   --board-size: min(
     calc(100vw - 2rem - var(--eval-bars)),
     calc(100dvh - 10rem),
     560px
   );
+}
+
+/* Lichess brown (#f0d9b5/#b58863) dimmed to sit on the dark page. brown.css
+   draws its board as an image, so a gradient takes over. */
+.cg-wrap cg-board {
+  background: repeating-conic-gradient(
+      var(--board-dark) 0 25%,
+      var(--board-light) 0 50%
+    )
+    0 0 / 25% 25%;
 }
 
 /* chessground 10.x's brown.css colours rank coords inverted. */
@@ -126,8 +143,8 @@ body {
   --tw-prose-pre-bg: var(--color-surface);
   --tw-prose-th-borders: var(--color-line);
   --tw-prose-td-borders: var(--color-line-row);
-  font-size: 16px;
-  line-height: 27px;
+  font-size: 16.5px;
+  line-height: 27.5px;
 
   & a {
     text-decoration-color: var(--color-line-strong);

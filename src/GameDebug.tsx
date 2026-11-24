@@ -141,7 +141,7 @@ export function GameDebug({
           pinned.current =
             box.scrollHeight - box.scrollTop - box.clientHeight < 24
         }}
-        className="flex-1 min-h-0 overflow-auto px-3 py-1.5 font-mono text-[11px] leading-relaxed"
+        className="flex-1 min-h-0 overflow-auto px-3 py-1.5 font-mono text-[11.5px] leading-relaxed"
       >
         {shown.length === 0 ? (
           <p className="font-sans text-xs text-faint">

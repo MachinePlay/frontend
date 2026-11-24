@@ -120,7 +120,7 @@ function Clock({
     : base
   return (
     <span
-      className={`num ml-auto shrink-0 rounded border px-2.5 py-0.5 text-[22px] font-medium leading-7 ${
+      className={`num ml-auto shrink-0 rounded border px-2.5 py-0.5 text-[23px] font-medium leading-[30px] ${
         ticking
           ? 'border-fg bg-fg text-bg'
           : 'border-line bg-surface text-muted'

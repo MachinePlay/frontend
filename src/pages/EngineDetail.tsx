@@ -156,7 +156,7 @@ function StatsStrip({
           className="-mb-px -mr-px flex flex-col gap-1 border-b border-r border-line px-5 py-4"
         >
           <span className="text-xs text-faint">{c.label}</span>
-          <span className="num text-[22px] font-medium leading-7">{c.value}</span>
+          <span className="num text-[23px] font-medium leading-[30px]">{c.value}</span>
           <span className="truncate text-xs text-muted">{c.sub}</span>
         </div>
       ))}

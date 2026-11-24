@@ -232,7 +232,7 @@ export function Select({
         {...rest}
         className={`${field} w-full min-w-0 cursor-pointer appearance-none pr-7 ${leading ? 'pl-6' : ''}`}
       />
-      <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[11px] text-faint">
+      <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[11.5px] text-faint">
         ▼
       </span>
     </span>
@@ -306,7 +306,7 @@ export function TagPills({
         <span
           key={tag}
           className={`rounded-full border border-line text-muted ${
-            small ? 'px-2 py-px text-[11px]' : 'px-2.5 py-0.5 text-xs'
+            small ? 'px-2 py-px text-[11.5px]' : 'px-2.5 py-0.5 text-xs'
           }`}
         >
           {tag}
