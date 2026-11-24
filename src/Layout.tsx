@@ -70,8 +70,8 @@ export default function Layout() {
           <NavLink to="/tournament" className={navLinkClass}>
             tournaments
           </NavLink>
-          <NavLink to="/about" className={navLinkClass}>
-            about
+          <NavLink to="/docs" className={navLinkClass}>
+            docs
           </NavLink>
           <AuthSlot />
         </nav>

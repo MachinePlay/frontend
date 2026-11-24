@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 592 1070" width="592" height="1070" font-family="ui-sans-serif, system-ui, sans-serif">
+<style>
+  .bg    { fill: #ffffff; }
+  .panel { fill: #f6f7f9; }
+  .done  { fill: #ebedf0; }
+  .line  { stroke: #c8cdd4; }
+  .edge  { stroke: #1c1e21; stroke-width: 2; opacity: .5; fill: none; }
+  .edge.pruned { stroke: #c8cdd4; stroke-width: 1.6; stroke-dasharray: 3 4; opacity: .7; }
+  .box   { stroke-width: 1.8; }
+  .max   { stroke: #c62828; }
+  .min   { stroke: #1d4ed8; }
+  .nega  { stroke: #a16207; }
+  .leafbox { stroke: #c8cdd4; }
+  .leafbox.pruned { stroke-dasharray: 3 4; opacity: .5; }
+  .name  { font-size: 11px; }
+  .name.max { fill: #c62828; }
+  .name.min { fill: #1d4ed8; }
+  .name.nega { fill: #a16207; }
+  .val   { fill: #1c1e21; font-size: 15px; font-weight: 650; }
+  .val.dim { fill: #9aa1ab; }
+  .ab    { fill: #6b7280; font-size: 11px; }
+  .title { fill: #1c1e21; font-size: 15px; font-weight: 650; }
+  .head  { fill: #6b7280; font-size: 11px; letter-spacing: .08em; }
+  .cap   { fill: #1c1e21; font-size: 13px; }
+  .num   { fill: #6b7280; font-size: 12px; }
+  .cut   { fill: #7c3aed; }
+  .cut .b, .cut tspan { fill: #7c3aed; }
+  .b     { font-weight: 650; }
+  text   { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .mid   { text-anchor: middle; }
+
+  @media (prefers-color-scheme: dark) {
+    .bg    { fill: #14161a; }
+    .panel { fill: #1b1e24; }
+    .done  { fill: #24272e; }
+    .line  { stroke: #333944; }
+    .edge  { stroke: #e7e9ee; }
+    .edge.pruned { stroke: #333944; }
+    .max, .name.max { stroke: #f4796b; }
+    .name.max { fill: #f4796b; }
+    .min, .name.min { stroke: #7aa7f5; }
+    .name.min { fill: #7aa7f5; }
+    .nega, .name.nega { stroke: #fbbf24; }
+    .name.nega { fill: #fbbf24; }
+    .leafbox { stroke: #333944; }
+    .val, .title { fill: #e7e9ee; }
+    .val.dim { fill: #5c646f; }
+    .ab, .head, .num { fill: #98a1af; }
+    .cap   { fill: #e7e9ee; }
+    .cut, .cut tspan { fill: #a78bfa; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="592" height="1070" rx="10"/>
+<rect class="bg line" x="0.5" y="0.5" width="591" height="1069" rx="10" fill="none"/>
+<text class="title" x="24" y="24">Alpha-beta, with the window it carries</text>
+<path class="edge" d="M 296 130 L 160 182"/>
+<path class="edge" d="M 160 254 L 92 319"/>
+<path class="edge" d="M 160 254 L 228 319"/>
+<path class="edge" d="M 296 130 L 432 182"/>
+<path class="edge" d="M 432 254 L 364 319"/>
+<path class="edge pruned" d="M 432 254 L 500 319"/>
+<rect class="box done nega" x="236" y="58" width="120" height="72" rx="9"/>
+<text class="name mid nega" x="296" y="71" dominant-baseline="middle">A ▲ max</text>
+<text class="val mid" x="296" y="94" dominant-baseline="middle">score = 4</text>
+<text class="ab mid" x="296" y="116" dominant-baseline="middle">α 4 β ∞</text>
+<rect class="box done nega" x="100" y="182" width="120" height="72" rx="9"/>
+<text class="name mid nega" x="160" y="195" dominant-baseline="middle">B ▲ max</text>
+<text class="val mid" x="160" y="218" dominant-baseline="middle">score = -4</text>
+<text class="ab mid" x="160" y="240" dominant-baseline="middle">α -4 β ∞</text>
+<rect class="box done leafbox" x="47" y="319" width="90" height="46" rx="7"/>
+<text class="val mid" x="92" y="342" dominant-baseline="middle">eval = 4</text>
+<rect class="box done leafbox" x="183" y="319" width="90" height="46" rx="7"/>
+<text class="val mid" x="228" y="342" dominant-baseline="middle">eval = 8</text>
+<rect class="box done nega" x="372" y="182" width="120" height="72" rx="9"/>
+<text class="name mid nega" x="432" y="195" dominant-baseline="middle">C ▲ max</text>
+<text class="val mid" x="432" y="218" dominant-baseline="middle">score ≥ -3</text>
+<text class="ab mid" x="432" y="240" dominant-baseline="middle">α -3 β -4</text>
+<rect class="box done leafbox" x="319" y="319" width="90" height="46" rx="7"/>
+<text class="val mid" x="364" y="342" dominant-baseline="middle">eval = 3</text>
+<rect class="box panel leafbox pruned" x="455" y="319" width="90" height="46" rx="7"/>
+<text class="val mid dim" x="500" y="342" dominant-baseline="middle">eval = ?</text>
+<line class="line" x1="24" y1="380" x2="568" y2="380"/>
+<text class="head" x="24" y="398">STEP BY STEP</text>
+<text class="num" x="24" y="422">1.</text>
+<text class="cap" x="50" y="422" xml:space="preserve"><tspan>Start</tspan><tspan> at</tspan><tspan class="b"> A</tspan><tspan>.</tspan><tspan> It</tspan><tspan> is</tspan><tspan> your</tspan><tspan> move,</tspan><tspan> and</tspan><tspan> the</tspan><tspan> score</tspan><tspan> belongs</tspan><tspan> to</tspan><tspan> whoever</tspan><tspan> moves,</tspan><tspan> so</tspan><tspan class="b"> A</tspan></text>
+<text class="cap" x="50" y="440" xml:space="preserve"><tspan>takes</tspan><tspan> the</tspan><tspan> biggest</tspan><tspan> child</tspan><tspan> like</tspan><tspan> every</tspan><tspan> other</tspan><tspan> node.</tspan><tspan> Nothing</tspan><tspan> seen</tspan><tspan> yet.</tspan></text>
+<text class="num" x="24" y="466">2.</text>
+<text class="cap" x="50" y="466" xml:space="preserve"><tspan>Walk</tspan><tspan> down</tspan><tspan> into</tspan><tspan class="b"> B</tspan><tspan>.</tspan><tspan> It</tspan><tspan> is</tspan><tspan> your</tspan><tspan> opponent's</tspan><tspan> move,</tspan><tspan> and</tspan><tspan> the</tspan><tspan> score</tspan><tspan> belongs</tspan><tspan> to</tspan></text>
+<text class="cap" x="50" y="484" xml:space="preserve"><tspan>whoever</tspan><tspan> moves,</tspan><tspan> so</tspan><tspan class="b"> B</tspan><tspan> takes</tspan><tspan> the</tspan><tspan> biggest</tspan><tspan> child</tspan><tspan> like</tspan><tspan> every</tspan><tspan> other</tspan><tspan> node.</tspan><tspan> Nothing</tspan></text>
+<text class="cap" x="50" y="502" xml:space="preserve"><tspan>seen</tspan><tspan> yet.</tspan></text>
+<text class="num" x="24" y="528">3.</text>
+<text class="cap" x="50" y="528" xml:space="preserve"><tspan>Bottom</tspan><tspan> of</tspan><tspan> the</tspan><tspan> tree.</tspan><tspan> Evaluate</tspan><tspan> the</tspan><tspan> position</tspan><tspan> for</tspan><tspan> the</tspan><tspan> side</tspan><tspan> to</tspan><tspan> move:</tspan><tspan class="b"> 4</tspan><tspan>.</tspan></text>
+<text class="num" x="24" y="554">4.</text>
+<text class="cap" x="50" y="554" xml:space="preserve"><tspan>Back</tspan><tspan> up</tspan><tspan> with</tspan><tspan class="b"> 4</tspan><tspan>,</tspan><tspan> which</tspan><tspan> is</tspan><tspan class="b"> -4</tspan><tspan> from</tspan><tspan> here.</tspan><tspan class="b"> B</tspan><tspan> takes</tspan><tspan> your</tspan><tspan> opponent's</tspan><tspan> side,</tspan><tspan> so</tspan><tspan> from</tspan></text>
+<text class="cap" x="50" y="572" xml:space="preserve"><tspan>here</tspan><tspan> its</tspan><tspan> score</tspan><tspan> can</tspan><tspan> only</tspan><tspan> climb:</tspan><tspan class="b"> ≥</tspan><tspan class="b"> -4</tspan><tspan>.</tspan></text>
+<text class="num" x="24" y="598">5.</text>
+<text class="cap" x="50" y="598" xml:space="preserve"><tspan>Bottom</tspan><tspan> of</tspan><tspan> the</tspan><tspan> tree.</tspan><tspan> Evaluate</tspan><tspan> the</tspan><tspan> position</tspan><tspan> for</tspan><tspan> the</tspan><tspan> side</tspan><tspan> to</tspan><tspan> move:</tspan><tspan class="b"> 8</tspan><tspan>.</tspan></text>
+<text class="num" x="24" y="624">6.</text>
+<text class="cap" x="50" y="624" xml:space="preserve"><tspan>Back</tspan><tspan> up</tspan><tspan> with</tspan><tspan class="b"> 8</tspan><tspan>,</tspan><tspan> which</tspan><tspan> is</tspan><tspan class="b"> -8</tspan><tspan> from</tspan><tspan> here.</tspan><tspan> No</tspan><tspan> better</tspan><tspan> for</tspan><tspan> your</tspan><tspan> opponent:</tspan><tspan class="b"> B</tspan><tspan> stays</tspan><tspan class="b"> ≥</tspan></text>
+<text class="cap" x="50" y="642" xml:space="preserve"><tspan class="b">-4</tspan><tspan>.</tspan></text>
+<text class="num" x="24" y="668">7.</text>
+<text class="cap" x="50" y="668" xml:space="preserve"><tspan class="b">B</tspan><tspan> is</tspan><tspan> finished</tspan><tspan> at</tspan><tspan class="b"> -4</tspan><tspan>,</tspan><tspan> and</tspan><tspan> that</tspan><tspan> goes</tspan><tspan> back</tspan><tspan> up</tspan><tspan> to</tspan><tspan class="b"> A</tspan><tspan>.</tspan></text>
+<text class="num" x="24" y="694">8.</text>
+<text class="cap" x="50" y="694" xml:space="preserve"><tspan>Back</tspan><tspan> up</tspan><tspan> with</tspan><tspan class="b"> -4</tspan><tspan>,</tspan><tspan> which</tspan><tspan> is</tspan><tspan class="b"> 4</tspan><tspan> from</tspan><tspan> here.</tspan><tspan class="b"> A</tspan><tspan> takes</tspan><tspan> your</tspan><tspan> side,</tspan><tspan> so</tspan><tspan> from</tspan><tspan> here</tspan><tspan> its</tspan></text>
+<text class="cap" x="50" y="712" xml:space="preserve"><tspan>score</tspan><tspan> can</tspan><tspan> only</tspan><tspan> climb:</tspan><tspan class="b"> ≥</tspan><tspan class="b"> 4</tspan><tspan>.</tspan></text>
+<text class="num" x="24" y="738">9.</text>
+<text class="cap" x="50" y="738" xml:space="preserve"><tspan>Walk</tspan><tspan> down</tspan><tspan> into</tspan><tspan class="b"> C</tspan><tspan>.</tspan><tspan> It</tspan><tspan> is</tspan><tspan> your</tspan><tspan> opponent's</tspan><tspan> move,</tspan><tspan> and</tspan><tspan> the</tspan><tspan> score</tspan><tspan> belongs</tspan><tspan> to</tspan></text>
+<text class="cap" x="50" y="756" xml:space="preserve"><tspan>whoever</tspan><tspan> moves,</tspan><tspan> so</tspan><tspan class="b"> C</tspan><tspan> takes</tspan><tspan> the</tspan><tspan> biggest</tspan><tspan> child</tspan><tspan> like</tspan><tspan> every</tspan><tspan> other</tspan><tspan> node.</tspan><tspan> Nothing</tspan></text>
+<text class="cap" x="50" y="774" xml:space="preserve"><tspan>seen</tspan><tspan> yet.</tspan></text>
+<text class="num" x="24" y="800">10.</text>
+<text class="cap" x="50" y="800" xml:space="preserve"><tspan>Bottom</tspan><tspan> of</tspan><tspan> the</tspan><tspan> tree.</tspan><tspan> Evaluate</tspan><tspan> the</tspan><tspan> position</tspan><tspan> for</tspan><tspan> the</tspan><tspan> side</tspan><tspan> to</tspan><tspan> move:</tspan><tspan class="b"> 3</tspan><tspan>.</tspan></text>
+<text class="num" x="24" y="826">11.</text>
+<text class="cap" x="50" y="826" xml:space="preserve"><tspan>Back</tspan><tspan> up</tspan><tspan> with</tspan><tspan class="b"> 3</tspan><tspan>,</tspan><tspan> which</tspan><tspan> is</tspan><tspan class="b"> -3</tspan><tspan> from</tspan><tspan> here.</tspan><tspan class="b"> C</tspan><tspan> takes</tspan><tspan> your</tspan><tspan> opponent's</tspan><tspan> side,</tspan><tspan> so</tspan><tspan> from</tspan></text>
+<text class="cap" x="50" y="844" xml:space="preserve"><tspan>here</tspan><tspan> its</tspan><tspan> score</tspan><tspan> can</tspan><tspan> only</tspan><tspan> climb:</tspan><tspan class="b"> ≥</tspan><tspan class="b"> -3</tspan><tspan>.</tspan></text>
+<text class="num" x="24" y="870">12.</text>
+<text class="cap cut" x="50" y="870" xml:space="preserve"><tspan>α</tspan><tspan> ≥</tspan><tspan> β</tspan><tspan> (</tspan><tspan class="b">-3</tspan><tspan> ≥</tspan><tspan class="b"> -4</tspan><tspan>):</tspan><tspan> whatever</tspan><tspan> is</tspan><tspan> left</tspan><tspan> down</tspan><tspan> here,</tspan><tspan> your</tspan><tspan> opponent</tspan><tspan> would</tspan><tspan> never</tspan><tspan> be</tspan></text>
+<text class="cap cut" x="50" y="888" xml:space="preserve"><tspan>allowed</tspan><tspan> to</tspan><tspan> reach</tspan><tspan> it.</tspan><tspan class="b"> Cut</tspan><tspan class="b"> off</tspan><tspan>:</tspan><tspan> skip</tspan><tspan> the</tspan><tspan> rest</tspan><tspan> of</tspan><tspan class="b"> C</tspan><tspan>.</tspan></text>
+<text class="num" x="24" y="914">13.</text>
+<text class="cap" x="50" y="914" xml:space="preserve"><tspan class="b">C</tspan><tspan> is</tspan><tspan> finished</tspan><tspan> at</tspan><tspan class="b"> ≥</tspan><tspan class="b"> -3</tspan><tspan>:</tspan><tspan> we</tspan><tspan> never</tspan><tspan> learned</tspan><tspan> its</tspan><tspan> exact</tspan><tspan> score,</tspan><tspan> only</tspan><tspan> that</tspan><tspan> it</tspan><tspan> is</tspan><tspan> at</tspan></text>
+<text class="cap" x="50" y="932" xml:space="preserve"><tspan>least</tspan><tspan class="b"> -3</tspan><tspan>,</tspan><tspan> and</tspan><tspan> that</tspan><tspan> goes</tspan><tspan> back</tspan><tspan> up</tspan><tspan> to</tspan><tspan class="b"> A</tspan><tspan>.</tspan></text>
+<text class="num" x="24" y="958">14.</text>
+<text class="cap" x="50" y="958" xml:space="preserve"><tspan>Back</tspan><tspan> up</tspan><tspan> with</tspan><tspan class="b"> -3</tspan><tspan>,</tspan><tspan> which</tspan><tspan> is</tspan><tspan class="b"> 3</tspan><tspan> from</tspan><tspan> here.</tspan><tspan> No</tspan><tspan> better</tspan><tspan> for</tspan><tspan> you:</tspan><tspan class="b"> A</tspan><tspan> stays</tspan><tspan class="b"> ≥</tspan><tspan class="b"> 4</tspan><tspan>.</tspan></text>
+<text class="num" x="24" y="984">15.</text>
+<text class="cap" x="50" y="984" xml:space="preserve"><tspan class="b">A</tspan><tspan> is</tspan><tspan> finished</tspan><tspan> at</tspan><tspan class="b"> 4</tspan><tspan>.</tspan><tspan> That</tspan><tspan> is</tspan><tspan> the</tspan><tspan> move</tspan><tspan> to</tspan><tspan> play.</tspan></text>
+<text class="num" x="24" y="1010">16.</text>
+<text class="cap" x="50" y="1010" xml:space="preserve"><tspan>Done:</tspan><tspan class="b"> A</tspan><tspan> =</tspan><tspan class="b"> 4</tspan><tspan>,</tspan><tspan> the</tspan><tspan> same</tspan><tspan> answer,</tspan><tspan> after</tspan><tspan> evaluating</tspan><tspan class="b"> 3</tspan><tspan> leaves</tspan><tspan> instead</tspan><tspan> of</tspan><tspan> 4.</tspan><tspan> The</tspan><tspan class="b"> 1</tspan></text>
+<text class="cap" x="50" y="1028" xml:space="preserve"><tspan>skipped</tspan><tspan> leaf</tspan><tspan> could</tspan><tspan> not</tspan><tspan> have</tspan><tspan> changed</tspan><tspan> it.</tspan></text>
+</svg>

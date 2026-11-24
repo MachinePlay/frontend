@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>game-tree preview</title>
+<style>
+  body {
+    max-width: 760px; margin: 3rem auto; padding: 0 1rem;
+    font: 16px/1.65 ui-sans-serif, system-ui, sans-serif;
+    background: #fff; color: #1c1e21;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #0f1115; color: #e7e9ee; } }
+  h2 { margin-top: 2.5rem; }
+  p { color: #6b7280; }
+  @media (prefers-color-scheme: dark) { p { color: #98a1af; } }
+  game-tree { margin: 1.25rem 0; }
+</style>
+
+<h1>&lt;game-tree&gt; preview</h1>
+
+<h2>Figure 1 — depth 1, you are choosing</h2>
+<p>One node, three replies, no recursion: take the biggest.</p>
+<game-tree id="d1max"></game-tree>
+
+<h2>Figure 2 — depth 1, your opponent is choosing</h2>
+<p>The same search from the other side of the board: take the smallest.</p>
+<game-tree id="d1min"></game-tree>
+
+<h2>Figure 3 — minimax, two levels deep</h2>
+<p>Both players choosing in turn, every leaf evaluated.</p>
+<game-tree mode="minimax"></game-tree>
+
+<h2>Figure 4 — the same tree, read as negamax</h2>
+<p>One kind of node instead of two: every score belongs to whoever is to move, so every node
+takes the biggest child and every edge flips a sign.</p>
+<game-tree mode="negamax"></game-tree>
+
+<h2>Figure 5 — the same tree, minus one leaf</h2>
+<p>C ends up <code>score &le; 3</code> here but <code>score = 2</code> in figure 3: a wrong
+value that cannot hurt the answer, which is <code>A = 4</code> either way.</p>
+<game-tree mode="alphabeta" bounds="off"></game-tree>
+
+<h2>Figure 6 — alpha-beta, with the window it carries</h2>
+<p>The same cut, in negamax form, with the &alpha;/&beta; window each node is searched under.</p>
+<game-tree mode="negamax-alphabeta"></game-tree>
+
+<h2>Figure 7 &mdash; worst possible move order</h2>
+<p>Nothing to cut on: all eight leaves evaluated.</p>
+<game-tree mode="alphabeta" tree='{"kind":"max","children":[{"children":[{"children":[{"value":3},{"value":6}]},{"children":[{"value":4},{"value":5}]}]},{"children":[{"children":[{"value":1},{"value":8}]},{"children":[{"value":2},{"value":7}]}]}]}'></game-tree>
+
+<h2>Figure 8 &mdash; best possible move order</h2>
+<p>Same tree, same answer, five leaves.</p>
+<game-tree mode="alphabeta" tree='{"kind":"max","children":[{"children":[{"children":[{"value":7},{"value":2}]},{"children":[{"value":8},{"value":1}]}]},{"children":[{"children":[{"value":5},{"value":4}]},{"children":[{"value":6},{"value":3}]}]}]}'></game-tree>
+
+<script type="module">
+  import "./game-tree.js";
+  document.getElementById("d1max").tree =
+    { kind: "max", children: [{ value: 1 }, { value: 3 }, { value: 2 }] };
+  document.getElementById("d1min").tree =
+    { kind: "min", children: [{ value: 3 }, { value: 1 }, { value: 2 }] };
+</script>

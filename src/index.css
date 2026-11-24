@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 html,
 body {
@@ -74,4 +75,106 @@ body {
 
 .cg-wrap.captured-pieces piece + piece {
   margin-left: -0.25rem;
+}
+
+/* --- docs (rendered markdown, src/docs) ------------------------------------ */
+
+.docs-prose {
+  /* Docs are code-heavy: no typographic backticks around inline code. */
+  & :where(code):not(:where(pre *))::before,
+  & :where(code):not(:where(pre *))::after {
+    content: none;
+  }
+  & :where(code):not(:where(pre *)) {
+    background: var(--color-neutral-900);
+    border: 1px solid var(--color-neutral-800);
+    border-radius: 0.25rem;
+    padding: 0.1em 0.3em;
+    font-weight: 400;
+  }
+  & pre {
+    background: var(--color-neutral-900);
+    border: 1px solid var(--color-neutral-800);
+  }
+  /* highlight.js's theme pads and colours its own box; the <pre> already does. */
+  & pre code.hljs {
+    padding: 0;
+    background: transparent;
+  }
+  & pre.mermaid {
+    background: transparent;
+    border: none;
+    text-align: center;
+  }
+
+  /* Headings are anchors to themselves. */
+  & :is(h1, h2, h3) {
+    scroll-margin-top: 1rem;
+    & > a {
+      color: inherit;
+      text-decoration: none;
+    }
+  }
+  /* Chapters of a long doc are `#` headings: set them apart. */
+  & h1:not(:first-child) {
+    margin-top: 3.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-neutral-800);
+    font-size: 1.875em;
+  }
+
+  & table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  & details {
+    margin: 1.25em 0;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color-neutral-800);
+    border-radius: 0.375rem;
+    background: color-mix(in oklab, var(--color-neutral-900) 60%, transparent);
+    & > summary {
+      cursor: pointer;
+      color: var(--color-neutral-300);
+    }
+  }
+
+  & .markdown-alert {
+    margin: 1.25em 0;
+    padding: 0.5rem 1rem;
+    border-left: 3px solid var(--color-sky-600);
+    background: color-mix(in oklab, var(--color-sky-950) 40%, transparent);
+    border-radius: 0 0.25rem 0.25rem 0;
+    & > :first-child { margin-top: 0; }
+    & > :last-child { margin-bottom: 0; }
+  }
+  & .markdown-alert-title {
+    font-weight: 600;
+    font-size: 0.8em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    & svg { display: inline; fill: currentColor; margin-right: 0.4em; vertical-align: -0.15em; }
+  }
+  & .markdown-alert-note .markdown-alert-title { color: var(--color-sky-300); }
+  & .markdown-alert-todo {
+    border-left-color: var(--color-amber-500);
+    background: color-mix(in oklab, var(--color-amber-950) 45%, transparent);
+    & .markdown-alert-title { color: var(--color-amber-300); }
+  }
+
+  /* <game-tree> follows prefers-color-scheme; the site is always dark. */
+  & game-tree {
+    --gt-bg: #14161a;
+    --gt-panel: #1b1e24;
+    --gt-fg: #e7e9ee;
+    --gt-muted: #98a1af;
+    --gt-line: #333944;
+    --gt-max: #f4796b;
+    --gt-min: #7aa7f5;
+    --gt-nega: #fbbf24;
+    --gt-active: #a78bfa;
+    --gt-cut: #a78bfa;
+    margin: 1.5em 0;
+  }
 }

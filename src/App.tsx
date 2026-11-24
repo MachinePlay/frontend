@@ -1,4 +1,5 @@
-import { BrowserRouter, Route, Routes } from 'react-router'
+import { lazy, Suspense } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import Layout from './Layout'
 import { AuthProvider } from './auth'
 import Home from './pages/Home'
@@ -15,7 +16,10 @@ import Tournaments from './pages/Tournaments'
 import TournamentNew from './pages/TournamentNew'
 import TournamentDetail from './pages/TournamentDetail'
 import NotFound from './pages/NotFound'
-import { Stub } from './pages/Stub'
+
+// Docs carry the tutorial's markdown, a markdown renderer and the figures:
+// keep them out of the main bundle.
+const Docs = lazy(() => import('./pages/Docs'))
 
 export default function App() {
   return (
@@ -34,13 +38,13 @@ export default function App() {
             <Route path="tournament" element={<Tournaments />} />
             <Route path="tournament/new" element={<TournamentNew />} />
             <Route path="tournament/:id" element={<TournamentDetail />} />
+            <Route path="docs" element={<Navigate to="/docs/engine-tutorial" replace />} />
             <Route
-              path="about"
+              path="docs/:slug"
               element={
-                <Stub
-                  title="about"
-                  note="MachinePlay — more soon."
-                />
+                <Suspense>
+                  <Docs />
+                </Suspense>
               }
             />
             {/* GitHub-style: /{login} profile, /{login}/{engine} detail.

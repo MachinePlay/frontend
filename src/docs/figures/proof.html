@@ -1,0 +1,24 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>static figure proof</title>
+<style>
+  body {
+    max-width: 720px; margin: 3rem auto; padding: 0 1rem;
+    font: 16px/1.65 ui-sans-serif, system-ui, sans-serif;
+    background: #fff; color: #1c1e21;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #0f1115; color: #e7e9ee; } }
+  img { display: block; width: 100%; margin: 1.5rem 0 2.5rem; }
+</style>
+
+<h1>Static figures (what non-JS renderers show)</h1>
+<p>Regenerate with <code>node figures/export.mjs</code>.</p>
+
+<img src="fig-depth1-max.svg" alt="Depth 1, max">
+<img src="fig-depth1-min.svg" alt="Depth 1, min">
+<img src="fig-minimax.svg" alt="Minimax">
+<img src="fig-negamax.svg" alt="Negamax">
+<img src="fig-prune.svg" alt="Alpha-beta, no window shown">
+<img src="fig-order-worst.svg" alt="Worst move order">
+<img src="fig-order-best.svg" alt="Best move order">
+<img src="fig-alphabeta.svg" alt="Alpha-beta">
