@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Route, Routes } from 'react-router'
 import Layout from './Layout'
 import { AuthProvider } from './auth'
 import Home from './pages/Home'
@@ -38,9 +38,8 @@ export default function App() {
             <Route path="tournament" element={<Tournaments />} />
             <Route path="tournament/new" element={<TournamentNew />} />
             <Route path="tournament/:id" element={<TournamentDetail />} />
-            <Route path="docs" element={<Navigate to="/docs/engine-tutorial" replace />} />
             <Route
-              path="docs/:slug"
+              path="docs/:slug?"
               element={
                 <Suspense>
                   <Docs />

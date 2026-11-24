@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router'
-import { DOCS, renderMarkdown, type TocEntry } from '../docs'
+import { DOCS, docPath, renderMarkdown, type TocEntry } from '../docs'
 import '../docs/figures/game-tree.js'
 import 'highlight.js/styles/github-dark.css'
 import NotFound from './NotFound'
@@ -31,7 +31,7 @@ function docLinkClass({ isActive }: { isActive: boolean }) {
 
 export default function Docs() {
   const { slug } = useParams()
-  const doc = DOCS.find((d) => d.slug === slug)
+  const doc = DOCS.find((d) => d.slug === (slug ?? ''))
   const rendered = useMemo(() => (doc ? renderMarkdown(doc.source) : null), [doc])
   const navigate = useNavigate()
   const { hash } = useLocation()
@@ -63,7 +63,7 @@ export default function Docs() {
             <span className="px-2 pb-1 text-xs uppercase tracking-wide text-neutral-600">docs</span>
             {DOCS.map((d) => (
               <div key={d.slug}>
-                <NavLink to={`/docs/${d.slug}`} className={docLinkClass}>
+                <NavLink to={docPath(d)} end className={docLinkClass}>
                   {d.title}
                 </NavLink>
                 {d === doc && rendered.toc.length > 0 && (

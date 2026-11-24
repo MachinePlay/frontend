@@ -10,6 +10,7 @@ import addRunner from './add-runner.md?raw'
 import about from './about.md?raw'
 
 export type Doc = {
+  // '' is the index page, at /docs itself.
   slug: string
   title: string
   source: string
@@ -18,10 +19,14 @@ export type Doc = {
 }
 
 export const DOCS: Doc[] = [
+  { slug: '', title: 'About MachinePlay.org', source: about, draft: false },
   { slug: 'engine-tutorial', title: 'Engine Tutorial', source: engineTutorial, draft: true },
   { slug: 'add-runner', title: 'Add runner', source: addRunner, draft: true },
-  { slug: 'about', title: 'About MachinePlay.org', source: about, draft: true },
 ]
+
+export function docPath(doc: Doc): string {
+  return doc.slug ? `/docs/${doc.slug}` : '/docs'
+}
 
 // Only the languages the docs use; a fence without one (UCI transcripts) stays plain.
 hljs.registerLanguage('python', python)

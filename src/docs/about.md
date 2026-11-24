@@ -29,11 +29,8 @@ engines, live, in the browser.
 ## Status
 
 MachinePlay is an early alpha, run for friends and for fun. Things change and break without notice,
-including URLs and features.
-
-> [!TODO]
-> Say what happens to uploaded engines and games during the alpha: are they kept, and can they be
-> wiped?
+including URLs and features. Uploaded engines and games are meant to stay, though: nothing is
+planned to wipe them.
 
 ## Open source
 
