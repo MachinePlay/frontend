@@ -21,9 +21,7 @@ function pvText(san: string[], startPly: number): string {
     .join(' ')
 }
 
-/** One engine's last search: its score, how deep it got, and the line it
-    intended to play. `fen` is the position it was searching, which is what the
-    PV plays out from. */
+/** One engine's last search. `fen` is the position it searched. */
 const EngineSearch = memo(function EngineSearch({
   side,
   name,
@@ -99,10 +97,8 @@ const EngineSearch = memo(function EngineSearch({
   )
 })
 
-/** Every eval in the game on one axis, White's frame, one line per engine.
-
-    Both engines score the same game from opposite sides, so the two lines
-    diverging is the interesting part: it is the disagreement between them. */
+/** Every eval in White's frame, one line per engine: where they diverge, the
+    engines disagree. */
 export const EvalGraph = memo(function EvalGraph({
   evals,
   activePly,
@@ -223,8 +219,7 @@ export const EvalGraph = memo(function EvalGraph({
   )
 })
 
-/** The "lines" tab: what each engine last said about the position on screen,
-    then the whole game's evals as a graph. */
+/** The "lines" tab: each engine's search at this ply, then the eval graph. */
 export function GameLines({
   white,
   black,

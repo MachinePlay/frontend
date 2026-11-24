@@ -16,8 +16,7 @@ body {
   );
 }
 
-/* chessground 10.x: brown.css assigns rank coord colors via :nth-child without
-   accounting for the column-reverse layout, so colors land inverted. Flip them. */
+/* chessground 10.x's brown.css colours rank coords inverted. */
 .cg-wrap.orientation-white .ranks :nth-child(odd),
 .cg-wrap.orientation-black .ranks :nth-child(even) {
   color: rgba(255, 255, 255, 0.8);
@@ -27,12 +26,8 @@ body {
   color: rgba(72, 72, 72, 0.8);
 }
 
-/* chessground's default `coords.files` is `left: 24px; width: 100%`, which
-   extends 24px past the board's right edge — fine when .cg-wrap has extra
-   padding around the board, but in our setup .cg-wrap IS the board, so this
-   causes horizontal page scroll on mobile. Pin files coords inside.
-   Selector includes `cg-container` to outrank chessground's same-specificity
-   default rule (chessground's CSS is imported after ours in main.tsx). */
+/* The default `left: 24px` overflows the board and scrolls phones sideways.
+   `cg-container` outranks chessground's CSS, which is imported after ours. */
 .cg-wrap cg-container coords.files {
   left: 0;
 }
@@ -77,7 +72,7 @@ body {
   margin-left: -0.25rem;
 }
 
-/* --- docs (rendered markdown, src/docs) ------------------------------------ */
+/* Rendered markdown from src/docs. */
 
 .docs-prose {
   /* Docs are code-heavy: no typographic backticks around inline code. */

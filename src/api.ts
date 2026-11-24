@@ -41,9 +41,7 @@ export class ApiError extends Error {
   }
 }
 
-/** True only when the backend positively answered "no such thing". A dead
-    backend or a 500 is *not* a 404 — pages must not show "page doesn't
-    exist" for those. */
+/** Only a real 404: a dead backend or a 500 must not read as "doesn't exist". */
 export const isNotFound = (error: unknown): boolean =>
   error instanceof ApiError && error.status === 404
 
@@ -51,15 +49,12 @@ export const isNotFound = (error: unknown): boolean =>
 export const isUnreachable = (error: unknown): boolean =>
   error instanceof ApiError && error.status === 0
 
-// Fetch + json with the backend's error envelope surfaced as the message.
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let r: Response
   try {
     r = await fetch(`${API_URL}${path}`, init)
   } catch {
-    // fetch only rejects when there was no HTTP response: the API is down,
-    // unresolvable, or blocked by CORS. Status 0 marks that apart from a
-    // real HTTP error so callers don't mistake it for "not found".
+    // No HTTP response at all: down, unresolvable, or blocked by CORS.
     throw new ApiError(`could not reach the API at ${API_URL}`, 0)
   }
   if (!r.ok) {
@@ -96,31 +91,21 @@ export const gameStreamUrl = (gameId: string): string =>
 export const liveStreamUrl = (): string => `${API_URL}/stream/live`
 export const runnerStreamUrl = (): string => `${API_URL}/stream/runners`
 
-// Kicks off the GitHub OAuth flow; the backend redirects back when done.
 export const githubLoginUrl = (): string => `${API_URL}/auth/github/login`
 
-// The logged-in user, or null when the session cookie is absent/expired.
 export const fetchMe = (): Promise<User | null> =>
   request<User>('/me', { credentials: 'include' }).catch(nullOn401)
 
 export const logout = (): Promise<unknown> =>
   request('/auth/logout', post())
 
-/** The name public history shows in place of a deleted account's handle. Not a
-    legal handle, so it never collides with a real user — see `DELETED_LOGIN` in
-    the backend's `app/accounts.py`. */
+/** Mirrors `DELETED_LOGIN` in the backend's `app/accounts.py`. */
 export const DELETED_LOGIN = '[deleted]'
 
-/** True when a recorded handle belongs to an account that no longer exists, so
-    callers render it as plain text instead of a link to a 404 (or, worse, to
-    whoever registered the freed handle next). */
+/** Render such a handle as text, not a link to a 404 or its next owner. */
 export const isDeletedLogin = (login: string): boolean =>
   login === DELETED_LOGIN
 
-/** Delete the logged-in account — whoever the session cookie names, so there is
-    nothing to pass. Engines, uploaded versions and registry images go; live
-    games and tournaments end immediately; played history stays. The typed-handle
-    confirmation is a UI gate (see DangerZone), not part of the request. */
 export const deleteAccount = (): Promise<unknown> =>
   request('/me', { method: 'DELETE', credentials: 'include' })
 
@@ -132,9 +117,7 @@ export const fetchEngineByName = (
 ): Promise<EngineDetail> =>
   request(`/user/${encodeURIComponent(login)}/${encodeURIComponent(name)}`)
 
-// Edit an engine's owner-managed metadata (owner/admin only). Omitted fields
-// are left unchanged; `tags` replaces the whole list. A rename moves the
-// engine's URL, so callers should navigate to the returned name.
+// A rename moves the engine's URL: navigate to the returned name.
 export const updateEngine = (
   login: string,
   name: string,
@@ -147,8 +130,6 @@ export const updateEngine = (
     body: JSON.stringify(patch),
   })
 
-// Delete an engine, its versions, and its registry images (owner/admin only).
-// Refused with a 409 while the engine has games pending or playing.
 export const deleteEngine = (login: string, name: string): Promise<unknown> =>
   request(`/user/${encodeURIComponent(login)}/${encodeURIComponent(name)}`, {
     method: 'DELETE',
@@ -158,8 +139,6 @@ export const deleteEngine = (login: string, name: string): Promise<unknown> =>
 const versionPath = (login: string, name: string, versionId: string): string =>
   `/user/${encodeURIComponent(login)}/${encodeURIComponent(name)}/version/${versionId}`
 
-// Rename one uploaded version (owner/admin only). Only the label moves —
-// finished games keep the version string they recorded. Returns the engine.
 export const updateEngineVersion = (
   login: string,
   name: string,
@@ -173,8 +152,6 @@ export const updateEngineVersion = (
     body: JSON.stringify(patch),
   })
 
-// Delete one uploaded version and its registry image (owner/admin only).
-// Refused with a 409 while that version has a game pending or playing.
 export const deleteEngineVersion = (
   login: string,
   name: string,
@@ -190,7 +167,6 @@ export const fetchUserProfile = (login: string): Promise<UserProfile> =>
 
 export const fetchGames = (): Promise<Game[]> => request('/game')
 
-// One game with its per-ply analysis; the list endpoints leave that out.
 export const fetchGame = (id: string): Promise<GameDetail> =>
   request(`/game/${id}`)
 
@@ -199,8 +175,6 @@ export const fetchRunners = (): Promise<Runner[]> => request('/runners')
 export const fetchRunner = (id: string): Promise<Runner> =>
   request(`/runner/${id}`)
 
-// Edit a runner's owner-managed metadata (owner only). Omitted fields are left
-// unchanged.
 export const updateRunner = (
   id: string,
   patch: { name?: string; description?: string },
@@ -212,9 +186,7 @@ export const updateRunner = (
     body: JSON.stringify(patch),
   })
 
-// Schedule a game; returns the new game id. Version ids are optional —
-// the backend defaults each side to the engine's latest upload — as is the
-// time control ("base+inc" seconds), which defaults server-side.
+// Returns the new game id; omitted versions and tc default server-side.
 export const startGame = async (req: {
   whiteEngineId: string
   blackEngineId: string
@@ -237,11 +209,9 @@ export const startGame = async (req: {
   return r.id
 }
 
-// Stop a running game; it ends as aborted with reason "cancelled".
 export const cancelGame = (id: string): Promise<unknown> =>
   request(`/game/${id}/cancel`, post())
 
-// The opening books a game or tournament can be dealt its starting line from.
 // Static for the life of a deploy, so callers cache it hard.
 export const fetchBooks = (): Promise<Book[]> => request('/book')
 
@@ -251,9 +221,6 @@ export const fetchTournaments = (): Promise<Tournament[]> =>
 export const fetchTournament = (id: string): Promise<TournamentDetail> =>
   request(`/tournament/${id}`)
 
-// One page of a tournament's pairings, in schedule order. Separate from the
-// detail because a tournament runs to thousands of games: the detail carries
-// only standings, progress and the live boards.
 export const fetchTournamentGames = (
   id: string,
   opts: { status?: GameStatus; limit: number; offset: number },
@@ -266,17 +233,13 @@ export const fetchTournamentGames = (
   return request(`/tournament/${id}/games?${params}`)
 }
 
-// Create a tournament and start dispatching its pairings; returns the detail
-// (participants + standings + progress). `tc`/`gauntletHeadId` are optional.
 export const createTournament = (
   req: TournamentCreateRequest,
 ): Promise<TournamentDetail> => request('/tournament', post(req))
 
-// Stop a running tournament (creator or admin only).
 export const cancelTournament = (id: string): Promise<unknown> =>
   request(`/tournament/${id}/cancel`, post())
 
-// Mint a CLI API token for the logged-in user (plaintext shown once).
 export const createCliToken = async (): Promise<string> =>
   (await request<TokenOut>('/me/tokens', post())).token
 
@@ -286,17 +249,14 @@ export const fetchTokens = (): Promise<ApiToken[]> =>
 export const revokeToken = (id: string): Promise<unknown> =>
   request(`/me/tokens/${id}`, { method: 'DELETE', credentials: 'include' })
 
-// The GitHub signup waiting for a handle, or null when none is pending.
 export const fetchPendingSignup = (): Promise<PendingSignup | null> =>
   request<PendingSignup>('/auth/pending', { credentials: 'include' }).catch(
     nullOn401,
   )
 
-// Complete a pending signup; throws the backend's message on a bad handle.
 export const completeSignup = (login: string): Promise<User> =>
   request('/auth/register', post({ login }))
 
-// GitHub-style frontend URLs.
 export const profileUrl = (login: string): string => `/${login}`
 export const engineUrl = (e: { name: string; owner_login: string }): string =>
   `/${e.owner_login}/${e.name}`

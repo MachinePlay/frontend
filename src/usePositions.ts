@@ -15,19 +15,12 @@ const freshCache = (): Cache => ({
   chess: new Chess(),
 })
 
-/** `positions[ply]` — the board after that many plies, index 0 being the start.
-
-    Built once and then *extended* in place as moves arrive. Replaying a game
-    from the start costs ~50ms by 400 plies, which is far too much to redo on
-    every arrow key and every incoming move. */
+/** `positions[ply]`, index 0 being the start. Extended in place as moves
+    arrive: a full replay costs ~50ms by 400 plies. */
 export function usePositions(moves: string[]): Position[] {
-  // Mutable and outliving each render, but only ever a cache: extending picks
-  // up where the cached line ended, so recomputing changes nothing.
   const [cache] = useState(freshCache)
 
   return useMemo(() => {
-    // Only a line continuing the cached one can reuse it; a rerun or a
-    // different game starts over.
     const reusable =
       moves.length >= cache.moves.length &&
       cache.moves.every((m, i) => m === moves[i])

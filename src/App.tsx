@@ -17,8 +17,7 @@ import TournamentNew from './pages/TournamentNew'
 import TournamentDetail from './pages/TournamentDetail'
 import NotFound from './pages/NotFound'
 
-// Docs carry the tutorial's markdown, a markdown renderer and the figures:
-// keep them out of the main bundle.
+// Markdown, renderer and figures stay out of the main bundle.
 const Docs = lazy(() => import('./pages/Docs'))
 
 export default function App() {
@@ -46,8 +45,7 @@ export default function App() {
                 </Suspense>
               }
             />
-            {/* GitHub-style: /{login} profile, /{login}/{engine} detail.
-                Static routes above always win over these dynamic segments. */}
+            {/* Static routes win over these; see RESERVED_HANDLES. */}
             <Route path=":login" element={<UserProfile />} />
             <Route path=":login/:engineName" element={<EngineDetail />} />
             <Route path="*" element={<NotFound />} />

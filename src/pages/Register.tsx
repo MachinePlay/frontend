@@ -8,8 +8,7 @@ import {
 import { useAuth } from '../auth-context'
 import { PrimaryButton } from '../components'
 
-// Lands here from the GitHub OAuth callback when the account is new: the
-// signup is parked server-side until the user picks a handle.
+// The OAuth callback lands a new account here to pick a handle.
 export default function Register() {
   const { setUser } = useAuth()
   const navigate = useNavigate()

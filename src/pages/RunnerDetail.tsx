@@ -14,7 +14,6 @@ import { useRunnerStream } from '../useRunnerStream'
 import { formatBytes, relativeTime } from '../format'
 import NotFound from './NotFound'
 
-// Mounted at /runners/:id.
 export default function RunnerDetail() {
   const { id = '' } = useParams()
   const { user } = useAuth()
@@ -30,9 +29,7 @@ export default function RunnerDetail() {
   })
   const liveMap = useRunnerStream()
 
-  // Owner-only edits; the patched runner lands in the cache directly so the
-  // field stops flickering back to its old value while the refetch is in
-  // flight. The list view is only invalidated.
+  // Written straight into the cache so the field doesn't flicker back.
   const patch = async (body: { name?: string; description?: string }) => {
     const updated = await updateRunner(id, body)
     queryClient.setQueryData(['runner', id], updated)
@@ -59,7 +56,6 @@ export default function RunnerDetail() {
   }
 
   const isOwner = user?.login === runner.owner_login
-  // Prefer live status when the SSE feed has it; fall back to the polled row.
   const live = liveMap.get(runner.runner_id)
   const online = live?.online ?? runner.online
   const activeGames = live?.active_games ?? runner.active_games

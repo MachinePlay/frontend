@@ -3,9 +3,8 @@ import type { SearchInfo } from './api'
 
 export type Side = 'white' | 'black'
 
-/** A score in White's frame: UCI reports from the searching side's point of
-    view, so Black's numbers are negated on the way in. Exactly one of `cp`
-    (centipawns) and `mate` (moves to mate, negative when Black mates) is set. */
+/** A score in White's frame (UCI's own is the mover's). Exactly one of `cp`
+    and `mate` is set; `mate` is negative when Black mates. */
 export type Eval = { cp: number | null; mate: number | null }
 
 export function toWhite(
@@ -19,8 +18,7 @@ export function toWhite(
   return null
 }
 
-/** The same score with no sign, for the eval bar — which end of the bar the
-    number sits at already says who is better, and the bar is 24px wide. */
+/** Unsigned, for the 24px eval bar, whose end already says who is better. */
 export function formatEvalShort(e: Eval | null): string {
   if (!e) return '·'
   if (e.mate !== null) return `M${Math.abs(e.mate)}`
@@ -34,20 +32,15 @@ export function formatEval(e: Eval | null): string {
   return `${pawns > 0 ? '+' : ''}${pawns.toFixed(2)}`
 }
 
-/** How much of an eval bar belongs to White, 0–1.
-
-    Centipawns are unbounded but the interesting range is small, so they go
-    through the usual logistic squash: ±1 pawn already moves the bar visibly,
-    ±10 pawns pins it. An unknown score sits at the halfway mark. */
+/** White's share of an eval bar, 0–1, through the usual logistic squash. */
 export function barFill(e: Eval | null): number {
   if (!e) return 0.5
   if (e.mate !== null) return e.mate < 0 ? 0 : 1
   return 1 / (1 + Math.exp(-0.00368208 * (e.cp ?? 0)))
 }
 
-/** The principal variation as SAN, played out from `fen`. Stops at the first
-    move that doesn't fit the position — engines do report junk PVs, and one
-    bad move shouldn't cost the whole line. */
+/** The PV as SAN from `fen`, cut at the first illegal move (engines do report
+    junk PVs). */
 export function pvSan(fen: string, pv: string[]): string[] {
   const chess = new Chess(fen)
   const san: string[] = []
@@ -61,14 +54,10 @@ export function pvSan(fen: string, pv: string[]): string[] {
   return san
 }
 
-/** One engine's search, and the ply it was about — the position it searched is
-    the board *before* that move, which is what its PV plays out from. */
+/** A search and its ply; the PV plays out from the board *before* that ply. */
 export type SidedEval = { info: SearchInfo; ply: number }
 
-/** Each engine's most recent search at `ply`, from the per-move evals.
-
-    `evals[i]` is what the mover reported for `moves[i]`, so White's are the
-    even indices and Black's the odd ones. */
+/** Each engine's latest search at `ply`: White's evals are the even indices. */
 export function evalsAt(
   evals: (SearchInfo | null)[],
   ply: number,

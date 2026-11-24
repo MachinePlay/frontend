@@ -118,15 +118,13 @@ function TokenSection() {
   )
 }
 
-/** Account deletion, gated on typing the handle out. */
 function DeleteAccountSection({ login }: { login: string }) {
   const navigate = useNavigate()
   const { setUser } = useAuth()
 
   const run = async () => {
     await deleteAccount()
-    // The backend cleared the session cookie; drop the client's copy of the
-    // user too, so the header stops offering a profile that no longer exists.
+    // The backend already cleared the session.
     setUser(null)
     void navigate('/', { replace: true })
   }

@@ -26,14 +26,10 @@ import {
 import { formatBytes } from '../format'
 import NotFound from './NotFound'
 
-// Tags are edited as one comma- (or space-) separated line; the backend
-// lowercases, de-duplicates and validates what comes back.
+// Comma- or space-separated; the backend normalizes them.
 const parseTags = (raw: string): string[] =>
   raw.split(/[,\s]+/).filter(Boolean)
 
-// One uploaded version. The owner can rename its label — that moves nothing but
-// the label, since the image is pinned by digest — or delete it, which the
-// backend refuses while that exact version has a game pending or playing.
 function VersionRow({
   version,
   editable,
@@ -76,7 +72,6 @@ function VersionRow({
   )
 }
 
-// Mounted at /{login}/{engineName}, GitHub-style.
 export default function EngineDetail() {
   const { login = '', engineName = '' } = useParams()
   const { user } = useAuth()
@@ -91,8 +86,8 @@ export default function EngineDetail() {
     queryFn: () => fetchEngineByName(login, engineName),
   })
 
-  // Owner/admin edits. A rename moves the engine's URL, so seed the cache under
-  // the new key and replace the current history entry with it.
+  // A rename moves the URL: seed the cache under the new key and replace the
+  // history entry.
   const patch = async (body: EngineUpdateRequest) => {
     const updated = await updateEngine(login, engineName, body)
     queryClient.setQueryData(['engine', login, updated.name], updated)
@@ -102,8 +97,6 @@ export default function EngineDetail() {
     }
   }
 
-  // Version edits stay on this page: only the label moves, so the engine's own
-  // cache entry is replaced with the detail the backend returns.
   const renameVersion = async (versionId: string, version: string) => {
     const updated = await updateEngineVersion(login, engineName, versionId, {
       version,
@@ -119,8 +112,7 @@ export default function EngineDetail() {
 
   const removeVersion = async (versionId: string) => {
     await deleteEngineVersion(login, engineName, versionId)
-    // Refetch before returning so the row is gone by the time the button
-    // stops saying "deleting…"; version_count also shows in engine lists.
+    // Refetch first, so the row is gone when the button stops saying "deleting…".
     await queryClient.invalidateQueries({
       queryKey: ['engine', login, engineName],
     })

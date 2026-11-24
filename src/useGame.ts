@@ -8,25 +8,19 @@ import {
   type UciLine,
 } from './api'
 
-/** The search an engine is running right now, as it last reported it. Only one
-    engine thinks at a time, so a single slot holds it; `ply` says which
-    position it is about, which is how a stale one is spotted after a move. */
+/** The search in progress; `ply` reveals a stale one after a move. */
 export type LiveSearch = {
   side: 'white' | 'black'
   ply: number
   info: SearchInfo
 }
 
-/** A transcript line with a stable identity. The buffer slides once it is
-    full, so a line's index is not its own — and a key that moves re-renders
-    every row under it on each batch. */
+/** A stable key: the buffer slides, so an index would re-render every row. */
 export type LoggedLine = UciLine & { seq: number }
 
-/** How much of the UCI conversation the page keeps. The backend already caps
-    what it replays; this bounds a long game watched from the first move. */
+/** Bounds a long game watched from the first move. */
 const UCI_LIMIT = 2000
 
-/** Number the lines of one batch, continuing from the counter. */
 function tag(
   lines: UciLine[],
   counter: { current: number },
@@ -40,27 +34,20 @@ export type Clocks = { white: number; black: number; updatedAt: number }
 
 export type ConnStatus = 'connecting' | 'connected' | 'error' | 'disconnected'
 
-/** One game's live state: the initial fetch, then SSE updates while playing.
-
-    Static facts (names, versions, tc, runner) come from the fetch; the stream
-    keeps moves/clocks/result fresh and delivers the terminal status + reason. */
+/** One game's live state: the initial fetch, then SSE updates while playing. */
 export function useGame(id: string | undefined) {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [connStatus, setConnStatus] = useState<ConnStatus>('connecting')
   const [whiteName, setWhiteName] = useState<string | null>(null)
   const [blackName, setBlackName] = useState<string | null>(null)
-  // Which uploaded version each side plays; from the initial fetch only
-  // (stream events don't carry it, and it never changes mid-game).
+  // Fetch-only: stream events don't carry versions.
   const [whiteVersion, setWhiteVersion] = useState<string | null>(null)
   const [blackVersion, setBlackVersion] = useState<string | null>(null)
   const [tc, setTc] = useState<string | null>(null)
   const [runnerId, setRunnerId] = useState<string | null>(null)
-  // How many leading moves came from the opening book rather than an engine.
   const [bookPlies, setBookPlies] = useState(0)
   const [moves, setMoves] = useState<string[]>([])
-  // Parallel to `moves`: what each mover's search reported. The live search and
-  // the UCI transcript are stream-only; a finished game keeps the tail of the
-  // transcript on its doc.
+  // Parallel to `moves`.
   const [evals, setEvals] = useState<(SearchInfo | null)[]>([])
   const [liveSearch, setLiveSearch] = useState<LiveSearch | null>(null)
   const [uciLines, setUciLines] = useState<LoggedLine[]>([])

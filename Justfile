@@ -13,11 +13,11 @@ preview:
 lint:
     pnpm lint
 
-# Regenerate TS types from ./openapi.json.
-# Run `just gen-api` in the backend repo first to refresh openapi.json.
+# Regenerate TS types from ./openapi.json; `just gen-api` in the umbrella dir
+# refreshes that first.
 gen-api:
     pnpm gen-api
 
-# Build & publish the static site to the VPS (see deploy-machineplay-frontend in malganis).
+# Build & publish the static site on the VPS.
 deploy:
     ssh root@machineplay.org deploy-machineplay-frontend

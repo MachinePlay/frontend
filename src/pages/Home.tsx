@@ -104,7 +104,7 @@ export default function Home() {
     queryFn: fetchTournaments,
     refetchInterval: 10_000,
   })
-  // '' means "use the default" so the selects work as soon as data arrives.
+  // '' means "use the default".
   const [whiteSel, setWhiteSel] = useState('')
   const [blackSel, setBlackSel] = useState('')
   const [whiteVerSel, setWhiteVerSel] = useState('')
@@ -116,8 +116,7 @@ export default function Home() {
 
   const whiteId = whiteSel || engines[0]?.id || ''
   const blackId = blackSel || engines[Math.min(1, engines.length - 1)]?.id || ''
-  // Only online runners can play, so default to the first online one (falling
-  // back to any runner so the select still shows a sensible value).
+  // Prefer an online runner.
   const onlineRunners = runners.filter((r) => r.online)
   const runnerId =
     runnerSel || onlineRunners[0]?.runner_id || runners[0]?.runner_id || ''
@@ -125,12 +124,10 @@ export default function Home() {
 
   const whiteVersions = useEngineVersions(engines.find((e) => e.id === whiteId))
   const blackVersions = useEngineVersions(engines.find((e) => e.id === blackId))
-  // Versions are sorted newest-first, so the default ('') is the latest.
   const whiteVersionId = whiteVerSel || whiteVersions[0]?.id || ''
   const blackVersionId = blackVerSel || blackVersions[0]?.id || ''
 
-  // Live events update the shared ['games'] cache, so this page and any
-  // revisit render the freshest state without refetching.
+  // Live events update the shared ['games'] cache.
   useEffect(() => {
     const es = new EventSource(liveStreamUrl())
     es.onmessage = (e) => {
@@ -165,7 +162,7 @@ export default function Home() {
 
   const allLive = (games ?? []).filter((g) => g.status === 'playing')
   const live = allLive.slice(0, LIVE_DISPLAY_LIMIT)
-  // Everything terminal (ended *and* aborted) — aborted games shouldn't vanish.
+  // Aborted games too.
   const recent = (games ?? []).filter((g) => g.status !== 'playing').slice(0, 20)
 
   return (

@@ -7,8 +7,6 @@ import '@lichess-org/chessground/assets/chessground.brown.css'
 import '@lichess-org/chessground/assets/chessground.cburnett.css'
 import App from './App.tsx'
 
-// Cached data renders instantly on revisit and refreshes in the background;
-// "loading…" only ever shows on a cold first load.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

@@ -16,23 +16,18 @@ import { useEngineVersions } from '../useEngineVersions'
 import { DEFAULT_TC, TC_PRESETS, estimateTournamentSeconds } from '../tc'
 import { formatDuration } from '../format'
 
-// Mirrors MAX_GAMES_PER_TOURNAMENT in backend/app/tournaments.py. The cap is on
-// the total, not on games/pairing: a round robin has C(n,2) pairings, so the
-// same per-pairing count is 500 games for a two-engine match and 14000 for
-// eight players.
+// Mirrors MAX_GAMES_PER_TOURNAMENT in backend/app/tournaments.py.
 const MAX_GAMES = 2000
 
-// Mirrors books.NO_BOOK in backend/app/books.py: the value that means "start
-// every game from the initial position" rather than naming a book.
+// Mirrors books.NO_BOOK in backend/app/books.py.
 const NO_BOOK = 'none'
 
 const selectClass = 'bg-neutral-900 border border-neutral-800 rounded px-2 py-1'
 const fieldClass =
   'bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-sm'
 
-// One participant slot: an engine + version. `key` is a stable local id so rows
-// keep their identity (and the gauntlet head reference) across edits/removals.
-// `versionId` is '' for "latest".
+// `key` keeps a row's identity (and the gauntlet head) across removals;
+// `versionId` '' means latest.
 type Entry = { key: string; engineId: string; versionId: string }
 
 const mkEntry = (engineId: string): Entry => ({
@@ -41,15 +36,11 @@ const mkEntry = (engineId: string): Entry => ({
   versionId: '',
 })
 
-// C(n,2) for round robin, (n-1) for gauntlet — the number of distinct pairings.
 function pairingCount(format: TournamentFormat, n: number): number {
   if (n < 2) return 0
   return format === 'gauntlet' ? n - 1 : (n * (n - 1)) / 2
 }
 
-// One participant row: engine + version pickers, a gauntlet-head control and a
-// remove button. The same engine can appear on several rows at different
-// versions.
 function EntryRow({
   entry,
   engines,
@@ -137,7 +128,6 @@ export default function TournamentNew() {
     queryFn: fetchRunners,
     staleTime: 5_000,
   })
-  // Books only change on a deploy.
   const { data: books = [] } = useQuery({
     queryKey: ['books'],
     queryFn: fetchBooks,
@@ -152,14 +142,12 @@ export default function TournamentNew() {
   const [gamesPerPairing, setGamesPerPairing] = useState(2)
   const [runnerSel, setRunnerSel] = useState('')
   const [tcSel, setTcSel] = useState(DEFAULT_TC)
-  // '' until the catalog loads, then the first book — a tournament without one
-  // is two deterministic engines replaying a single game.
+  // '' until the catalog loads, then the first book.
   const [bookSel, setBookSel] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Seed two rows the first time the engine list arrives, so the form is usable
-  // at once. Done during render (not in an effect) to avoid an extra commit.
+  // Seeded during render, not in an effect, to avoid an extra commit.
   if (!seeded && engines.length > 0) {
     setSeeded(true)
     setEntries([
@@ -176,7 +164,6 @@ export default function TournamentNew() {
     runnerSel || onlineRunners[0]?.runner_id || runners[0]?.runner_id || ''
   const selectedRunner = runners.find((r) => r.runner_id === runnerId)
 
-  // The gauntlet head is one of the rows; default to the first.
   const effectiveHeadKey =
     format === 'gauntlet'
       ? entries.some((e) => e.key === headKey)
@@ -184,21 +171,15 @@ export default function TournamentNew() {
         : (entries[0]?.key ?? '')
       : ''
 
-  // Two rows with the identical engine+version are a duplicate. (An explicit
-  // version equal to "latest" is only caught server-side.)
+  // An explicit version equal to "latest" is only caught server-side.
   const dup =
     new Set(entries.map((e) => `${e.engineId}|${e.versionId}`)).size !==
     entries.length
 
   const pairings = pairingCount(format, entries.length)
   const games = pairings * gamesPerPairing
-  // The cap is on the tournament's total games, so what one pairing may play
-  // depends on how many pairings there are.
   const maxPerPairing = pairings > 0 ? Math.floor(MAX_GAMES / pairings) : MAX_GAMES
   const tooManyGames = games > MAX_GAMES
-  // Rough wallclock, from the time control and how many games the runner plays
-  // at once — the number that says whether this finishes over lunch or in two
-  // days. The backend recomputes it for the tournament page.
   const eta = estimateTournamentSeconds(
     games,
     tcSel,

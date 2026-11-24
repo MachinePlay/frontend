@@ -1,17 +1,14 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { LoggedLine } from './useGame'
 
-/** How many lines the view renders before asking. The buffer holds thousands;
-    mounting all of them is what made opening this tab stutter, and every
-    arriving batch then re-rendered the lot. */
+/** Lines rendered before asking; mounting the whole buffer stutters. */
 const WINDOW = 400
 
 type Filters = { white: boolean; black: boolean; sent: boolean; info: boolean }
 
 const ALL: Filters = { white: true, black: true, sent: true, info: true }
 
-/** `info string` is where an engine prints its own debug messages, so it counts
-    as engine output rather than search chatter and stays when `info` is off. */
+/** `info string` is the engine's own debug output, not search chatter. */
 const isSearchInfo = (text: string): boolean =>
   text.startsWith('info') && !text.startsWith('info string')
 
@@ -30,11 +27,8 @@ const lineColor = (line: LoggedLine): string => {
   return 'text-neutral-300'
 }
 
-/** One transcript line: a prefix saying who spoke and which way, then what was
-    said. Memoized on the line object, which never changes once it has arrived,
-    so a new batch only mounts its own rows. Plain inline flow rather than a
-    flex row — hundreds of these are on screen and each layout box is paid for.
-    */
+/** Memoized, so a batch mounts only its own rows; inline flow, not flex, since
+    hundreds are on screen. */
 const LogRow = memo(function LogRow({ line }: { line: LoggedLine }) {
   return (
     <div className="whitespace-pre">
@@ -79,12 +73,8 @@ function Toggle({
   )
 }
 
-/** The "debug" tab: the UCI conversation, as fastchess logged it.
-
-    Search chatter is thinned on the runner (one `info` line per depth, and no
-    two in the same breath) and capped per search, so an engine that prints per
-    node stays readable. While a game is live this is the whole conversation;
-    afterwards only its tail survives on the game. */
+/** The "debug" tab: the UCI conversation as fastchess logged it, thinned by
+    the runner. A finished game keeps only the tail. */
 export function GameDebug({
   lines,
   live,
@@ -104,9 +94,8 @@ export function GameDebug({
   const hidden = showAll ? 0 : Math.max(0, matching.length - WINDOW)
   const shown = hidden ? matching.slice(-WINDOW) : matching
 
-  // Follow the tail, but only while the reader hasn't scrolled up to read
-  // something older. Keyed on the last line rather than the count, which stops
-  // moving once the window is full.
+  // Follow the tail unless scrolled up. Keyed on the last line: the count
+  // stops moving once the window is full.
   const lastSeq = shown.at(-1)?.seq
   useEffect(() => {
     const box = boxRef.current

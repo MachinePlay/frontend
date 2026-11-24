@@ -29,8 +29,7 @@ export type ApiTokenOut = {
 /**
  * BookOut
  *
- * One opening book in the catalog. `lines` is a count, not the lines
- * themselves: the browser only needs to name and size the choice.
+ * One opening book in the catalog; `lines` is a count.
  */
 export type BookOut = {
     /**
@@ -100,11 +99,8 @@ export type EngineDetailOut = {
 /**
  * EngineInfoEvent
  *
- * An engine's search-in-progress, sent while it is still thinking.
- *
- * Throttled by the runner (a new depth, or every few hundred ms) and never
- * persisted: it is superseded by the MoveEvent's `analysis` as soon as the
- * engine moves.
+ * A search in progress. Throttled and never persisted: the MoveEvent's
+ * `analysis` supersedes it.
  */
 export type EngineInfoEvent = {
     /**
@@ -316,9 +312,7 @@ export type FenEvent = {
 /**
  * GameDetailOut
  *
- * One game's page: everything the list view carries, plus the analysis the
- * engines produced. Both fields are per-ply and can run to hundreds of
- * entries, so they stay out of the list responses.
+ * GameOut plus the per-ply analysis, too big for list responses.
  */
 export type GameDetailOut = {
     /**
@@ -586,10 +580,7 @@ export type HttpValidationError = {
 /**
  * HardwareInfo
  *
- * Static hardware description a runner reports once, in its Introduction.
- *
- * Persisted on the backend's Runner doc so it shows even while offline. GPU
- * fields can be added here later as a purely additive change.
+ * Static hardware a runner reports in its Introduction.
  */
 export type HardwareInfo = {
     /**
@@ -812,12 +803,10 @@ export type RunnerUpdateRequest = {
 /**
  * SearchInfo
  *
- * What one engine reported about its search, distilled from `info` lines.
+ * One engine's search, distilled from `info` lines.
  *
- * Scores are UCI's own: from the searching side's point of view, in
- * centipawns (`score_cp`) or moves-to-mate (`score_mate`), never both. `pv`
- * is the principal variation in UCI move notation, capped so a chatty engine
- * can't push arbitrarily large events.
+ * Scores are from the searching side's point of view, `score_cp` or
+ * `score_mate` but never both. `pv` is capped.
  */
 export type SearchInfo = {
     /**
@@ -857,9 +846,7 @@ export type SearchInfo = {
 /**
  * StandingRow
  *
- * One participant's tally over the tournament's finished (ENDED) games.
- *
- * A participant is an (engine, version) pair; version_id is its stable key.
+ * One participant's tally over the finished games, keyed by version_id.
  */
 export type StandingRow = {
     /**
@@ -955,10 +942,7 @@ export type StartGameResponse = {
 /**
  * Telemetry
  *
- * Live resource utilization a runner reports periodically while connected.
- *
- * Kept in memory on the backend (meaningful only while online) and fanned out
- * over the runner SSE stream; not persisted.
+ * Live utilization a runner reports periodically; never persisted.
  */
 export type Telemetry = {
     /**
@@ -1115,12 +1099,8 @@ export type TournamentFormat = 'round_robin' | 'gauntlet';
 /**
  * TournamentGameRow
  *
- * One pairing in the tournament's game list.
- *
- * Deliberately narrower than `GameOut`: no moves, pgn or fen. A tournament
- * runs to thousands of games and the page polls while it is running, so the
- * list carries only what a row renders. The live boards (`live_games`, capped
- * by the runner's slot count) still get the full `GameOut`.
+ * One row of the pairings list: no moves, pgn or fen, since a tournament
+ * runs to thousands of games and the page polls.
  */
 export type TournamentGameRow = {
     /**
@@ -1258,9 +1238,6 @@ export type TournamentParticipantOut = {
  * TournamentProgress
  *
  * How many of the tournament's games sit in each state.
- *
- * Counted with one aggregate rather than by loading the games, so the page
- * stays cheap however many pairings there are.
  */
 export type TournamentProgress = {
     /**
@@ -1293,11 +1270,8 @@ export type TournamentStatus = 'running' | 'completed' | 'aborted';
 /**
  * UciLine
  *
- * One line of the UCI conversation, for the game page's debug view.
- *
- * `sent` is True for what the GUI sent the engine (fastchess's `<---`) and
- * False for the engine's own output (`--->`). `ply` is the game's ply when
- * the line was logged, so the view can be read alongside the moves.
+ * One line of the UCI conversation. `sent` is True for what fastchess sent
+ * the engine; `ply` is the game's ply when it was logged.
  */
 export type UciLine = {
     /**
@@ -1321,8 +1295,7 @@ export type UciLine = {
 /**
  * UciLogEvent
  *
- * A batch of UCI transcript lines. Live-only; the backend keeps a bounded
- * tail so a page opened mid-game (or after it ends) still has context.
+ * A batch of UCI transcript lines; the backend keeps only a tail.
  */
 export type UciLogEvent = {
     /**

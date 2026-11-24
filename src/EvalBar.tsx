@@ -1,10 +1,7 @@
 import { barFill, formatEvalShort, type Eval } from './eval'
 
-/** One engine's opinion of the position, as a bar beside the board.
-
-    Both bars read in White's frame — White's share fills from the bottom, or
-    from the top when the board is flipped — so the two engines can be compared
-    at a glance even though UCI scores come from each mover's own side. */
+/** One engine's eval beside the board. Both bars read in White's frame, so the
+    engines compare at a glance. */
 export function EvalBar({
   side,
   title,
@@ -18,8 +15,7 @@ export function EvalBar({
 }) {
   const fill = barFill(value)
   const whiteAhead = fill >= 0.5
-  // The readout sits at the winning end, which is White's end of the bar when
-  // White is ahead — the same end the fill grows from.
+  // The readout sits at the winning end.
   const atBoardBottom = whiteAhead !== flipped
 
   return (

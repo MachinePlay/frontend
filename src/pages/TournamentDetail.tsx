@@ -34,8 +34,6 @@ import { applyLiveEvent } from '../live'
 import { formatDuration, formatLabel, relativeTime } from '../format'
 import NotFound from './NotFound'
 
-// One page of the pairings list. Small enough to stay responsive on a
-// 2000-game tournament, big enough that most tournaments fit in one page.
 const GAMES_PAGE = 50
 
 const FILTERS: { label: string; status?: GameStatus }[] = [
@@ -45,9 +43,6 @@ const FILTERS: { label: string; status?: GameStatus }[] = [
   { label: 'aborted', status: 'aborted' },
 ]
 
-/** Who created the tournament. A deleted account is recorded as a neutral
-    label rather than a handle, so it renders as plain text — there is no
-    profile behind it, and the freed handle may belong to someone else now. */
 function Creator({ login }: { login: string }) {
   if (isDeletedLogin(login)) {
     return <span className="text-neutral-500">{login}</span>
@@ -121,9 +116,7 @@ function StandingsTable({
   )
 }
 
-/** How far along the tournament is, and roughly how much longer it has to run.
-    The bar is the games that have a result; aborted games are counted as done
-    (they will not be retried) but tinted apart from the played ones. */
+/** Progress and ETA. Aborted games count as done but are tinted apart. */
 function ProgressBar({
   progress,
   etaSeconds,
@@ -161,8 +154,6 @@ function ProgressBar({
   )
 }
 
-/** The pairings list: paged, and filterable by status. Kept out of the detail
-    response — a tournament runs to thousands of games and the page polls. */
 function Pairings({
   id,
   total,
@@ -187,8 +178,7 @@ function Pairings({
         const loaded = pages.reduce((n, p) => n + p.games.length, 0)
         return loaded < last.total ? loaded : undefined
       },
-      // Results land continuously while the tournament runs, but slower than
-      // the header polls: a refetch here re-reads every page already loaded.
+      // Slower than the header: a refetch re-reads every loaded page.
       refetchInterval: running ? 15_000 : false,
     })
 
@@ -289,7 +279,6 @@ function CancelControl({ id }: { id: string }) {
   )
 }
 
-// Mounted at /tournament/:id.
 export default function TournamentDetail() {
   const { id = '' } = useParams()
   const { user } = useAuth()
@@ -301,19 +290,12 @@ export default function TournamentDetail() {
   } = useQuery({
     queryKey: ['tournament', id],
     queryFn: () => fetchTournament(id),
-    // Poll while running so standings + newly-dispatched pairings show up.
     refetchInterval: (query) =>
       query.state.data?.status === 'running' ? 3_000 : false,
   })
 
-  // Animate the live boards move-by-move (like the home dashboard). Only merge
-  // events for boards already on screen — foreign games are ignored; the poll
-  // above adds newly-dispatched ones, then their board starts updating here.
-  //
-  // Merging locally is all this does: refetching on game_end instead would fire
-  // once per finished game, which on a short time control is several times a
-  // second. The polls are what refresh standings and the pairings list, and a
-  // few seconds' lag there is not worth the traffic.
+  // Animate the boards already on screen; the poll adds new ones. No refetch
+  // on game_end: at short time controls that fires several times a second.
   useEffect(() => {
     const es = new EventSource(liveStreamUrl())
     es.onmessage = (e) => {
@@ -368,8 +350,6 @@ export default function TournamentDetail() {
           <p className="text-sm text-neutral-400">
             {formatLabel(t.format)} · {t.progress.total} game
             {t.progress.total === 1 ? '' : 's'}
-            {/* Only worth spelling out when there is more than one pairing to
-                divide by — for a two-engine match the total says it all. */}
             {t.participants.length > 2 && <> ({t.games_per_pairing}/pairing)</>}{' '}
             · {t.tc} · on{' '}
             <Link

@@ -11,8 +11,7 @@ function Code({ children }: { children: string }) {
   )
 }
 
-// Installers in the order we recommend them: uv and pipx both put the CLI in
-// its own environment, plain pip needs a virtualenv to do the same.
+// In order of preference: uv and pipx isolate the CLI, pip needs a venv.
 const INSTALLERS = [
   {
     id: 'uv',

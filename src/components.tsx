@@ -47,9 +47,7 @@ export function Hint({ children }: { children: ReactNode }) {
   return <p className="text-neutral-500 text-sm italic">{children}</p>
 }
 
-/** Full-page "we couldn't load this" state. Distinct from NotFound, which
-    means the backend said the thing doesn't exist — this one means we never
-    got an answer we could trust. */
+/** "We couldn't load this": unlike NotFound, no trustworthy answer came back. */
 export function LoadError({
   what,
   error,
@@ -99,9 +97,8 @@ export function PrimaryButton({
   )
 }
 
-/** A destructive action in two clicks: the first arms the button, the second
-    runs it. Failures render beside the button and disarm it, so the backend's
-    refusal ("… games pending or playing") is what the user reads. */
+/** A destructive action in two clicks. Failures render beside the button, so
+    the user reads the backend's refusal. */
 export function ConfirmButton({
   label,
   confirmLabel,
@@ -117,7 +114,6 @@ export function ConfirmButton({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Disarm the confirm step after a moment so a stray click can't linger.
   useEffect(() => {
     if (!armed) return
     const t = setTimeout(() => setArmed(false), 4000)
@@ -165,16 +161,8 @@ const iconButtonClass =
 const fieldClass =
   'bg-neutral-900 border border-neutral-800 focus:border-neutral-600 rounded px-2 py-1 text-sm text-neutral-100 outline-none font-normal'
 
-/** A destructive action gated on typing `phrase` back — the heavier sibling of
-    ConfirmButton, for things that can't be undone and take other work with
-    them.
-
-    Collapsed to a quiet button until asked for: `children` is what deleting
-    actually costs, which is worth reading at the moment someone reaches for it
-    and is only noise on the way to anything else. Opening it reveals that
-    explanation plus the confirmation field; failures render below, so the
-    backend's refusal ("… games pending or playing") is what the user reads,
-    with the typed text left alone to retry. */
+/** ConfirmButton's heavier sibling: gated on typing `phrase` back. Collapsed
+    until opened, which reveals `children` (what deleting costs). */
 export function DangerZone({
   phrase,
   label,
@@ -205,8 +193,7 @@ export function DangerZone({
     setError(null)
     try {
       await onConfirm()
-      // Left busy on purpose: callers navigate away from what they just
-      // deleted, so re-arming the button would only flash it.
+      // Left busy: callers navigate away from what they deleted.
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setBusy(false)
@@ -293,11 +280,8 @@ const CloseIcon = () => (
   </svg>
 )
 
-/** Edit-in-place for one field: the value reads as plain text with a pencil
-    beside it, and turns into an input with save/cancel icons on click.
-    `children` is the display rendering (inline content — this sits inside
-    headings and paragraphs); `value` is the raw string being edited. Enter
-    saves (⌘/Ctrl+Enter when `multiline`), Escape cancels. */
+/** Edit-in-place for one field. `children` is the inline display, `value` the
+    raw string. Enter saves (⌘/Ctrl+Enter when `multiline`), Escape cancels. */
 export function InlineEdit({
   value,
   onSave,
@@ -376,8 +360,7 @@ export function InlineEdit({
     )
   }
 
-  // The field stays enabled while saving: disabling it blurs the element, so a
-  // rejected save would leave the caret (and Escape) nowhere.
+  // Not disabled while saving: that would blur it, stranding a rejected save.
   const field = multiline ? (
     <textarea
       autoFocus
@@ -458,8 +441,7 @@ export function TagPills({ tags }: { tags: string[] }) {
   )
 }
 
-/** What a game row renders — the fields common to a full `Game` and the lean
-    `TournamentGameRow` the tournament pairings list is paged in as. */
+/** Fields shared by `Game` and the lean `TournamentGameRow`. */
 export type GameRowData = Pick<
   Game,
   | 'id'
@@ -506,12 +488,10 @@ export function GameList({ games }: { games: GameRowData[] }) {
   )
 }
 
-/** A live game as a board preview with names + move counter — the dashboard
-    card, reused on the tournament page. */
+/** A live game's board preview, on the dashboard and tournament pages. */
 export function LiveGameCard({ game }: { game: Game }) {
   const moveNo = Math.max(1, Math.ceil(game.moves.length / 2))
-  // A fresh config object would redraw the board on every unrelated render of
-  // the dashboard; keep one per position.
+  // A fresh config would redraw the board on every render.
   const config = useMemo(
     (): Config => ({
       fen: game.fen,
@@ -562,8 +542,6 @@ export function EngineRow({ engine }: { engine: Engine }) {
           {engine.owner_login}/{engine.name}
         </span>
         {engine.version_count === 0 ? (
-          // Nothing to play: it can't be entered into a game or tournament
-          // until something is uploaded.
           <span className="ml-auto text-xs text-amber-500/80">no versions</span>
         ) : (
           <span className="ml-auto text-xs text-neutral-500">
@@ -638,8 +616,7 @@ export function Meter({
   )
 }
 
-// A runner joined with its latest live status (fresher than the polled row when
-// present). Live events win for online/telemetry/active_games.
+// Live status, when present, wins over the polled row.
 export function RunnerRow({
   runner,
   live,

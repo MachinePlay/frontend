@@ -6,8 +6,7 @@ export interface AuthState {
   loading: boolean
   login: () => void
   logout: () => Promise<void>
-  // Adopt a user established outside the provider (e.g. a just-completed
-  // signup), or drop it — the account deleted itself and its session is gone.
+  // After signup, or null after account deletion.
   setUser: (user: User | null) => void
 }
 

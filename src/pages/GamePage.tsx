@@ -64,9 +64,8 @@ function CapturedPieces({ pieces }: { pieces: CapturedPiece[] }) {
   )
 }
 
-/** The side's remaining time. While it is this side's turn the countdown runs
-    on an interval owned *here*, so ten ticks a second re-render one span
-    instead of the board and the whole move list. */
+/** The ticking clock owns its interval, so ten ticks a second re-render one
+    span, not the board and move list. */
 function Clock({
   base,
   since,
@@ -100,8 +99,6 @@ function Clock({
   )
 }
 
-/** One side's row above/below the board: color label, engine name + version,
-    captured pieces, and the (possibly ticking) clock. */
 function PlayerBar({
   color,
   name,
@@ -136,10 +133,8 @@ function PlayerBar({
   )
 }
 
-/** One numbered pair of plies. Memoized because a 400-ply game re-renders its
-    list on every incoming move, and only the touched rows actually change. */
-// Book moves are shown, not hidden — they are part of the game — but dimmed,
-// so what an engine actually chose is never mistaken for what it was handed.
+/** One numbered pair of plies, memoized for long games. Book moves are dimmed,
+    so they aren't mistaken for an engine's choice. */
 const bookClass = 'text-neutral-500 italic'
 
 const MoveRow = memo(function MoveRow({
@@ -162,8 +157,6 @@ const MoveRow = memo(function MoveRow({
   return (
     <li data-active={activeSide !== null} className="flex gap-2">
       <span className="text-neutral-500 w-6 shrink-0 text-right">{number}.</span>
-      {/* Both halves are the same width: a highlighted white move used to be a
-          short chip and a black one a bar running off the panel. */}
       <button
         type="button"
         onClick={() => onJump(number * 2 - 1)}
@@ -194,8 +187,7 @@ const MoveRow = memo(function MoveRow({
   )
 })
 
-/** The scrollable move list, kept out of the page's own render so a ticking
-    clock doesn't touch it. */
+/** Its own component, so a ticking clock doesn't re-render it. */
 const MoveList = memo(function MoveList({
   moves,
   activePly,
@@ -245,7 +237,6 @@ const MoveList = memo(function MoveList({
   )
 })
 
-/** A single or double chevron, pointing left unless flipped. */
 function Chevron({ dir, double }: { dir: 'left' | 'right'; double?: boolean }) {
   return (
     <svg
@@ -265,8 +256,7 @@ function Chevron({ dir, double }: { dir: 'left' | 'right'; double?: boolean }) {
   )
 }
 
-/** Start / back / forward / end, under the move list — the same jumps the
-    arrow, up and down keys make. */
+/** Start / back / forward / end, like the arrow keys. */
 function MoveNav({
   activePly,
   plies,
@@ -303,8 +293,7 @@ function MoveNav({
   )
 }
 
-/** Terminal state under the move list: result + termination reason, or a
-    cancel control while the game is playing (logged-in users only). */
+/** Result and reason, or a cancel control while playing. */
 function GameStatusPanel({
   gameId,
   status,
@@ -321,7 +310,6 @@ function GameStatusPanel({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Disarm the confirm step after a moment so a stray click can't linger.
   useEffect(() => {
     if (!armed) return
     const t = setTimeout(() => setArmed(false), 4000)
@@ -333,7 +321,7 @@ function GameStatusPanel({
     setError(null)
     try {
       await cancelGame(gameId)
-      // The game's SSE stream delivers the aborted game_end; no local state.
+      // The SSE stream delivers the aborted game_end.
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -409,15 +397,12 @@ export default function GamePage() {
   const following = viewPly === null && gameStatus === 'playing'
   const isClockTicking = gameStatus === 'playing' && following
 
-  // A move that failed to parse leaves the line short, so clamp rather than
-  // indexing past the end.
+  // A move that failed to parse leaves the line short.
   const positions = usePositions(moves)
   const shown = positions[Math.min(effectiveViewPly, positions.length - 1)]
   const displayFen = shown.fen
 
-  // One config object per actual change: Chessground's `set` redraws the board
-  // whenever this identity moves, and a new literal each render redraws it on
-  // every unrelated state change.
+  // Chessground redraws whenever this identity changes.
   const cgConfig = useMemo(
     (): Config => ({
       viewOnly: true,
@@ -451,9 +436,8 @@ export default function GamePage() {
     [moves.length, gameStatus],
   )
 
-  // Wheel over the board walks the game, the way lichess does. The listener is
-  // native and non-passive because React's own `onWheel` is passive, so it
-  // could not stop the page from scrolling underneath.
+  // Wheel over the board walks the game, as on lichess. Native and non-passive:
+  // React's `onWheel` is passive and can't stop the page scrolling.
   useEffect(() => {
     const board = boardRef.current
     if (!board) return
@@ -461,8 +445,7 @@ export default function GamePage() {
     const onWheel = (e: WheelEvent) => {
       if (!e.deltaY) return
       e.preventDefault()
-      // A trackpad flick is dozens of events; one ply per 30ms keeps a mouse
-      // notch at exactly one move and a flick at a readable run.
+      // A trackpad flick is dozens of events; a mouse notch should be one ply.
       if (e.timeStamp - last < 30) return
       last = e.timeStamp
       step(e.deltaY > 0 ? 1 : -1)
@@ -501,9 +484,7 @@ export default function GamePage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [moves.length, jumpTo, step])
 
-  // What each engine last said about the position on screen: the search still
-  // running when it is this side's turn in the live game, else the search that
-  // produced its most recent move.
+  // The running search if it's this side's turn live, else its last move's.
   const stored = evalsAt(evals, effectiveViewPly)
   const liveIsCurrent =
     liveSearch !== null && following && liveSearch.ply === moves.length
@@ -570,8 +551,7 @@ export default function GamePage() {
         <div className="sm:col-start-2 sm:row-start-1">
           <PlayerBar {...top} />
         </div>
-        {/* Bars and board sit side by side on every width: `contents` hands the
-            two children straight to the grid once it takes over. */}
+        {/* `contents` hands both children to the grid once it takes over. */}
         <div className="flex gap-2 sm:contents">
           <div className="flex gap-1 sm:col-start-1 sm:row-start-2">
             <EvalBar
@@ -627,8 +607,7 @@ export default function GamePage() {
         <div className="sm:col-start-2 sm:row-start-3">
           <PlayerBar {...bottom} />
         </div>
-        {/* An explicit width, never `w-full`: the debug transcript does not wrap,
-            so a panel sized by its content would stretch the page sideways. */}
+        {/* Not `w-full`: the unwrapped debug transcript would widen the page. */}
         <div className="flex flex-col w-[calc(var(--board-size)+var(--eval-bars))] h-64 sm:w-72 sm:h-[var(--board-size)] sm:col-start-3 sm:row-start-2 bg-neutral-900 border border-neutral-800 rounded overflow-hidden">
           <div className="flex border-b border-neutral-800 text-xs">
             {TABS.map((t) => (

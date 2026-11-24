@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "MachinePlay API",
-    "description": "\nBackend for **[MachinePlay](https://machineplay.org)**.\n\nUsers upload UCI chess engines as Docker images; runners pull them from a\nprivate registry and play games via\n[fastchess](https://github.com/Disservin/fastchess), streamed live to the\nbrowser over Server-Sent Events.\n",
+    "description": "\nBackend for **[MachinePlay](https://machineplay.org)**.\n\nUsers upload UCI chess engines as Docker images; runners pull them from the\nregistry and play games via\n[fastchess](https://github.com/Disservin/fastchess), streamed live to the\nbrowser over Server-Sent Events.\n",
     "version": "0.1.0"
   },
   "paths": {
@@ -188,7 +188,7 @@
           "Auth & account"
         ],
         "summary": "Delete Account",
-        "description": "Delete the logged-in account: engines, uploaded versions and registry\nimages go, live games and tournaments are ended, played history stays.\n\nThe website makes the user type their handle first; that gate is there to\nslow a human down, so it isn't re-checked here. The session is cleared on\nthe way out; signing in with GitHub again starts a brand-new account.",
+        "description": "Delete the logged-in account: engines, versions and images go, live games\nand tournaments are ended, played history stays.",
         "operationId": "delete_account",
         "responses": {
           "200": {
@@ -307,7 +307,7 @@
           "Auth & account"
         ],
         "summary": "Registry Token",
-        "description": "Docker Registry v2 token endpoint (the registry's `auth.token.realm`).\n\nAuthenticates the ``mp_`` token sent as the HTTP Basic password (written by\n``machineplay login``) and mints a signed JWT granting the requested scopes.",
+        "description": "Docker Registry v2 token endpoint; the ``mp_`` token is the Basic password.",
         "operationId": "registry_token",
         "responses": {
           "200": {
@@ -632,7 +632,7 @@
           "Engines"
         ],
         "summary": "Delete Engine Version",
-        "description": "Delete one uploaded version and its registry image (owner/admin).\n\nRefused while that version has a game pending or playing.",
+        "description": "Delete one uploaded version and its registry image (owner/admin).\nRefused while that version has a game pending or playing.",
         "operationId": "delete_engine_version",
         "parameters": [
           {
@@ -1175,7 +1175,7 @@
           "Tournaments"
         ],
         "summary": "Get Tournament Games",
-        "description": "A page of the tournament's pairings, in schedule order.\n\nPaged and stripped of moves/pgn: a tournament runs to thousands of games\nand the page polls this while it is running.",
+        "description": "A page of the tournament's pairings, in schedule order.",
         "operationId": "get_tournament_games",
         "parameters": [
           {
@@ -1306,7 +1306,7 @@
           "Opening books"
         ],
         "summary": "List Books",
-        "description": "The opening books a game or tournament can be dealt its start from.\n\nPass a book's `slug` as `book` when creating one, or `\"none\"` to play from\nthe initial position.",
+        "description": "Opening books; pass a `slug` as `book` when starting a game or\ntournament, or `\"none\"` for the initial position.",
         "operationId": "list_books",
         "responses": {
           "200": {
@@ -1574,7 +1574,7 @@
           "lines"
         ],
         "title": "BookOut",
-        "description": "One opening book in the catalog. `lines` is a count, not the lines\nthemselves: the browser only needs to name and size the choice."
+        "description": "One opening book in the catalog; `lines` is a count."
       },
       "EngineDetailOut": {
         "properties": {
@@ -1666,7 +1666,7 @@
           "info"
         ],
         "title": "EngineInfoEvent",
-        "description": "An engine's search-in-progress, sent while it is still thinking.\n\nThrottled by the runner (a new depth, or every few hundred ms) and never\npersisted: it is superseded by the MoveEvent's `analysis` as soon as the\nengine moves."
+        "description": "A search in progress. Throttled and never persisted: the MoveEvent's\n`analysis` supersedes it."
       },
       "EngineOut": {
         "properties": {
@@ -2212,7 +2212,7 @@
           "ended_at"
         ],
         "title": "GameDetailOut",
-        "description": "One game's page: everything the list view carries, plus the analysis the\nengines produced. Both fields are per-ply and can run to hundreds of\nentries, so they stay out of the list responses."
+        "description": "GameOut plus the per-ply analysis, too big for list responses."
       },
       "GameEndEvent": {
         "properties": {
@@ -2569,7 +2569,7 @@
           "ram_total_bytes"
         ],
         "title": "HardwareInfo",
-        "description": "Static hardware description a runner reports once, in its Introduction.\n\nPersisted on the backend's Runner doc so it shows even while offline. GPU\nfields can be added here later as a purely additive change."
+        "description": "Static hardware a runner reports in its Introduction."
       },
       "LiveStreamEvent": {
         "properties": {
@@ -2985,7 +2985,7 @@
         },
         "type": "object",
         "title": "SearchInfo",
-        "description": "What one engine reported about its search, distilled from `info` lines.\n\nScores are UCI's own: from the searching side's point of view, in\ncentipawns (`score_cp`) or moves-to-mate (`score_mate`), never both. `pv`\nis the principal variation in UCI move notation, capped so a chatty engine\ncan't push arbitrarily large events."
+        "description": "One engine's search, distilled from `info` lines.\n\nScores are from the searching side's point of view, `score_cp` or\n`score_mate` but never both. `pv` is capped."
       },
       "StandingRow": {
         "properties": {
@@ -3041,7 +3041,7 @@
           "score"
         ],
         "title": "StandingRow",
-        "description": "One participant's tally over the tournament's finished (ENDED) games.\n\nA participant is an (engine, version) pair; version_id is its stable key."
+        "description": "One participant's tally over the finished games, keyed by version_id."
       },
       "StartGameRequest": {
         "properties": {
@@ -3163,7 +3163,7 @@
           "ram_percent"
         ],
         "title": "Telemetry",
-        "description": "Live resource utilization a runner reports periodically while connected.\n\nKept in memory on the backend (meaningful only while online) and fanned out\nover the runner SSE stream; not persisted."
+        "description": "Live utilization a runner reports periodically; never persisted."
       },
       "TokenOut": {
         "properties": {
@@ -3518,7 +3518,7 @@
           "ended_at"
         ],
         "title": "TournamentGameRow",
-        "description": "One pairing in the tournament's game list.\n\nDeliberately narrower than `GameOut`: no moves, pgn or fen. A tournament\nruns to thousands of games and the page polls while it is running, so the\nlist carries only what a row renders. The live boards (`live_games`, capped\nby the runner's slot count) still get the full `GameOut`."
+        "description": "One row of the pairings list: no moves, pgn or fen, since a tournament\nruns to thousands of games and the page polls."
       },
       "TournamentGamesOut": {
         "properties": {
@@ -3676,7 +3676,7 @@
           "aborted"
         ],
         "title": "TournamentProgress",
-        "description": "How many of the tournament's games sit in each state.\n\nCounted with one aggregate rather than by loading the games, so the page\nstays cheap however many pairings there are."
+        "description": "How many of the tournament's games sit in each state."
       },
       "TournamentStatus": {
         "type": "string",
@@ -3718,7 +3718,7 @@
           "ply"
         ],
         "title": "UciLine",
-        "description": "One line of the UCI conversation, for the game page's debug view.\n\n`sent` is True for what the GUI sent the engine (fastchess's `<---`) and\nFalse for the engine's own output (`--->`). `ply` is the game's ply when\nthe line was logged, so the view can be read alongside the moves."
+        "description": "One line of the UCI conversation. `sent` is True for what fastchess sent\nthe engine; `ply` is the game's ply when it was logged."
       },
       "UciLogEvent": {
         "properties": {
@@ -3741,7 +3741,7 @@
           "lines"
         ],
         "title": "UciLogEvent",
-        "description": "A batch of UCI transcript lines. Live-only; the backend keeps a bounded\ntail so a page opened mid-game (or after it ends) still has context."
+        "description": "A batch of UCI transcript lines; the backend keeps only a tail."
       },
       "UserOut": {
         "properties": {

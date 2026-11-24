@@ -24,7 +24,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = () => {
-    // Full-page redirect into the GitHub OAuth flow.
     window.location.href = githubLoginUrl()
   }
 

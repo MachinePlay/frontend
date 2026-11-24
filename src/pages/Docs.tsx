@@ -36,8 +36,7 @@ export default function Docs() {
   const navigate = useNavigate()
   const { hash } = useLocation()
 
-  // The content arrives as one innerHTML write, after the browser has already
-  // tried to scroll to the hash, so do it again once it is there.
+  // The content lands after the browser tried to scroll to the hash.
   useEffect(() => {
     if (hash) document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView()
     else window.scrollTo(0, 0)
@@ -45,8 +44,7 @@ export default function Docs() {
 
   if (!doc || !rendered) return <NotFound />
 
-  // Site-internal links in the markdown are plain <a href="/...">; route them
-  // client-side instead of reloading the app.
+  // Route the markdown's internal <a href="/..."> links client-side.
   function onClick(e: React.MouseEvent) {
     const a = (e.target as HTMLElement).closest('a')
     const href = a?.getAttribute('href')
