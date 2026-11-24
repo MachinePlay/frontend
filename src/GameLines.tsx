@@ -68,20 +68,13 @@ export const EngineSearch = memo(function EngineSearch({
           {formatEval(value)}
         </span>
       </div>
-      {info ? (
-        <>
-          <span className="num text-xs text-faint">
-            {stats.join(' · ') || 'No search info'}
-          </span>
-          {line.length > 0 && (
-            <span className="num line-clamp-2 text-meta/5 text-muted">
-              {pvText(line, startPly)}
-            </span>
-          )}
-        </>
-      ) : (
-        <span className="text-xs text-faint">Nothing reported</span>
-      )}
+      <span className="num truncate text-xs text-faint">
+        {info ? stats.join(' · ') || 'No search info' : 'Nothing reported'}
+      </span>
+      {/* Fixed two-line slot so the panel doesn't jump as the PV grows and shrinks. */}
+      <span className="num line-clamp-2 h-10 text-meta/5 text-muted">
+        {line.length > 0 && pvText(line, startPly)}
+      </span>
     </div>
   )
 })
